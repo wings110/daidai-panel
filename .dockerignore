@@ -1,0 +1,41 @@
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+.windsurf/
+
+# 运行时数据（通过卷挂载）
+dd/
+backend/data/
+backend/instance/
+*.db
+*.sqlite3
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node 缓存
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# 日志
+*.log
+logs/
+
+# 文档（不需要打包进镜像）
+progress.md
+开发规划.md
+CHANGELOG.md
+
+# 临时文件
+*.bak
+*.tmp
+*.swp

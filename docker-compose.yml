@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  daidai-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: daidai-panel:latest
+    container_name: daidai-panel
+    restart: unless-stopped
+    ports:
+      - "5700:7100"  # 可修改为 "8080:5700" 避免端口冲突
+    volumes:
+      - ./data:/dd/data
+      - ./scripts:/dd/scripts
+      - ./log:/dd/log
+      - ./config:/dd/config
+    environment:
+      - TZ=Asia/Shanghai
+      - GUNICORN_WORKERS=2
+      - GUNICORN_THREADS=4

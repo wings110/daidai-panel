@@ -1,0 +1,417 @@
+/* ========================================
+   呆呆面板 - 视觉增强系统
+   ======================================== */
+
+/* ========== 玻璃态效果 ========== */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card-dark {
+  background: rgba(30, 30, 30, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 新拟态效果 ========== */
+
+.neumorphism {
+  background: #f0f0f0;
+  box-shadow:
+    8px 8px 16px rgba(163, 177, 198, 0.6),
+    -8px -8px 16px rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+}
+
+.neumorphism-inset {
+  background: #f0f0f0;
+  box-shadow:
+    inset 4px 4px 8px rgba(163, 177, 198, 0.4),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+}
+
+/* ========== 渐变边框 ========== */
+
+.gradient-border {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 2px;
+  background: linear-gradient(135deg, #1677FF, #7B5CFA);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* ========== 卡片样式增强 ========== */
+
+.card-modern {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-modern:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.08),
+    0 4px 8px rgba(0, 0, 0, 0.06);
+  border-color: rgba(22, 119, 255, 0.2);
+}
+
+.card-elevated {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.card-flat {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+/* ========== 按钮增强 ========== */
+
+.btn-gradient {
+  background: linear-gradient(135deg, #1677FF 0%, #7B5CFA 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 10px 24px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(22, 119, 255, 0.4);
+  background: linear-gradient(135deg, #0d5dd7 0%, #6347d4 100%);
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 24px;
+  transition: all 0.3s ease;
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-outline-modern {
+  background: transparent;
+  border: 2px solid #1677FF;
+  color: #1677FF;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-modern:hover {
+  background: #1677FF;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+/* ========== 徽章样式 ========== */
+
+.badge-modern {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #1677FF 0%, #7B5CFA 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.3);
+}
+
+.badge-success {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+}
+
+.badge-warning {
+  background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.3);
+}
+
+.badge-error {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+}
+
+.badge-outline {
+  background: transparent;
+  border: 2px solid currentColor;
+  box-shadow: none;
+}
+
+/* ========== 输入框增强 ========== */
+
+.input-modern {
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.input-modern:hover {
+  border-color: #d9d9d9;
+  background: #fff;
+}
+
+.input-modern:focus {
+  border-color: #1677FF;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.1);
+  outline: none;
+}
+
+.input-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.input-glass:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.input-glass::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ========== 标签页增强 ========== */
+
+.tabs-modern .ant-tabs-tab {
+  border-radius: 10px;
+  padding: 8px 20px;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+}
+
+.tabs-modern .ant-tabs-tab:hover {
+  background: rgba(22, 119, 255, 0.08);
+}
+
+.tabs-modern .ant-tabs-tab-active {
+  background: #1677FF;
+  color: #fff;
+}
+
+/* ========== 进度条增强 ========== */
+
+.progress-modern {
+  height: 8px;
+  border-radius: 10px;
+  background: #f0f0f0;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-modern-bar {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #1677FF 0%, #7B5CFA 100%);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-modern-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmerEffect 2s infinite;
+}
+
+/* ========== 分割线增强 ========== */
+
+.divider-gradient {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #1677FF, transparent);
+  border: none;
+  margin: 24px 0;
+}
+
+.divider-dashed {
+  border: none;
+  border-top: 2px dashed #d9d9d9;
+  margin: 24px 0;
+}
+
+/* ========== 工具提示增强 ========== */
+
+.tooltip-modern {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 下拉菜单增强 ========== */
+
+.dropdown-modern {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 8px;
+}
+
+.dropdown-modern-item {
+  border-radius: 8px;
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.dropdown-modern-item:hover {
+  background: rgba(22, 119, 255, 0.08);
+  color: #1677FF;
+}
+
+/* ========== 状态指示器 ========== */
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-dot-success {
+  background: #52c41a;
+  box-shadow: 0 0 8px rgba(82, 196, 26, 0.6);
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.status-dot-warning {
+  background: #faad14;
+  box-shadow: 0 0 8px rgba(250, 173, 20, 0.6);
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.status-dot-error {
+  background: #ff4d4f;
+  box-shadow: 0 0 8px rgba(255, 77, 79, 0.6);
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.status-dot-processing {
+  background: #1677FF;
+  box-shadow: 0 0 8px rgba(22, 119, 255, 0.6);
+  animation: breathe 2s ease-in-out infinite;
+}
+
+/* ========== 加载占位符 ========== */
+
+.loading-placeholder {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ========== 空状态 ========== */
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  color: #d9d9d9;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-state-text {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 24px;
+}
+
+/* ========== 响应式工具类 ========== */
+
+@media (max-width: 768px) {
+  .card-modern,
+  .card-elevated {
+    border-radius: 12px;
+  }
+
+  .btn-gradient,
+  .btn-glass,
+  .btn-outline-modern {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}

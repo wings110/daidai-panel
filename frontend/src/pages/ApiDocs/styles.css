@@ -1,0 +1,292 @@
+/* API 文档页专用样式 */
+
+/* 侧边栏 */
+.api-sider {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.api-sider .api-search {
+  padding: 16px 14px 8px;
+}
+
+.api-sider .ant-menu-item {
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  margin: 2px 8px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease;
+}
+
+.api-sider .ant-menu-item:hover {
+  background: #f0f5ff !important;
+}
+
+.api-sider .ant-menu-item-selected {
+  background: linear-gradient(135deg, #e6f4ff, #f0f5ff) !important;
+  box-shadow: inset 3px 0 0 #1677ff;
+}
+
+.api-sider .ant-menu-item-group-title {
+  padding: 12px 20px 4px !important;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8c8c8c;
+}
+
+/* 方法标签 */
+.method-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #fff;
+  line-height: 20px;
+}
+
+.method-get { background: linear-gradient(135deg, #52c41a, #73d13d); }
+.method-post { background: linear-gradient(135deg, #1677ff, #4096ff); }
+.method-put { background: linear-gradient(135deg, #fa8c16, #ffa940); }
+.method-delete { background: linear-gradient(135deg, #ff4d4f, #ff7875); }
+
+/* 小号标签（侧栏用） */
+.method-badge-sm {
+  min-width: 40px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 18px;
+  border-radius: 3px;
+}
+
+/* URL 栏 */
+.url-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #fafafa, #f5f5f5);
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.url-bar:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.url-path {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 14px;
+  color: #1f1f1f;
+  word-break: break-all;
+}
+
+/* 内容区切换动画 */
+.api-content-enter {
+  animation: slideInRight 0.35s ease-out both;
+}
+
+/* 参数区块 */
+.param-section {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.param-section-header {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #fafafa, #f5f5f5);
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+  font-size: 13px;
+  color: #595959;
+}
+
+/* 代码块 */
+.code-block-wrapper {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0;
+}
+
+.code-block {
+  background: #1a1a2e !important;
+  color: #e0e0e0;
+  padding: 20px;
+  margin: 0;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow: auto;
+  max-height: 340px;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.code-block .kw { color: #c792ea; }
+.code-block .str { color: #c3e88d; }
+.code-block .url { color: #89ddff; }
+.code-block .flag { color: #ffcb6b; }
+
+.code-copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.code-block-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}
+
+/* 响应状态徽章 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-200 {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.status-401 {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+/* 认证提示条 */
+.auth-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  animation: fadeIn 0.3s ease-out both;
+}
+
+.auth-banner.auth-jwt {
+  background: linear-gradient(135deg, #fffbe6, #fff7e6);
+  border: 1px solid #ffe58f;
+  color: #ad6800;
+}
+
+.auth-banner.auth-none {
+  background: linear-gradient(135deg, #f6ffed, #fcffe6);
+  border: 1px solid #b7eb8f;
+  color: #389e0d;
+}
+
+/* 代码语言标签页增强 */
+.code-tabs .ant-tabs-tab {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  border-radius: 6px 6px 0 0 !important;
+  transition: all 0.2s ease;
+}
+
+.code-tabs .ant-tabs-tab:hover {
+  color: #1677ff;
+}
+
+/* 卡片标题分隔条 */
+.section-title {
+  position: relative;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f1f1f;
+  padding-left: 12px;
+  margin-bottom: 16px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1677ff, #4096ff);
+}
+
+/* 响应区域 */
+.response-section {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.response-fields {
+  flex: 1;
+  min-width: 300px;
+}
+
+.response-example {
+  flex: 1;
+  min-width: 300px;
+}
+
+/* 页面内容区面包屑 */
+.api-breadcrumb {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* 标题区域 */
+.api-endpoint-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f1f1f;
+  margin: 0 0 16px 0;
+  line-height: 1.3;
+}
+
+/* 描述区域 */
+.api-description {
+  font-size: 14px;
+  color: #595959;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .api-sider {
+    display: none;
+  }
+
+  .response-section {
+    flex-direction: column;
+  }
+
+  .url-bar {
+    padding: 10px 14px;
+  }
+}
