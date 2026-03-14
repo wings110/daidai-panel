@@ -135,6 +135,7 @@ docker compose up -d
 
 ```bash
 docker run -d \
+  --pull=always \
   --name daidai-panel \
   --restart unless-stopped \
   -p 5700:5700 \
@@ -159,6 +160,7 @@ docker run -d \
 ```bash
 # 示例：通过宿主机 8080 端口访问面板
 docker run -d \
+  --pull=always \
   --name daidai-panel \
   --restart unless-stopped \
   -p 8080:5700 \
@@ -173,6 +175,7 @@ docker run -d \
 ```bash
 # 示例：容器内部使用 7100 端口，宿主机通过 8080 访问
 docker run -d \
+  --pull=always \
   --name daidai-panel \
   --restart unless-stopped \
   -p 8080:7100 \
