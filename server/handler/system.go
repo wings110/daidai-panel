@@ -421,6 +421,15 @@ func (h *SystemHandler) UpdatePanel(c *gin.Context) {
 	})
 }
 
+func (h *SystemHandler) Restart(c *gin.Context) {
+	response.Success(c, gin.H{"message": "面板将在 2 秒后重启"})
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		os.Exit(1)
+	}()
+}
+
 func (h *SystemHandler) PanelLog(c *gin.Context) {
 	linesStr := c.DefaultQuery("lines", "100")
 	keyword := c.Query("keyword")
@@ -472,6 +481,7 @@ func (h *SystemHandler) RegisterRoutes(r *gin.RouterGroup) {
 		sys.GET("/version", h.Version)
 		sys.GET("/check-update", h.CheckUpdate)
 		sys.POST("/update", middleware.RequireAdmin(), h.UpdatePanel)
+		sys.POST("/restart", middleware.RequireAdmin(), h.Restart)
 		sys.GET("/panel-log", h.PanelLog)
 		sys.POST("/backup", middleware.RequireAdmin(), h.Backup)
 		sys.POST("/backup/upload", middleware.RequireAdmin(), h.UploadBackup)

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"math"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -54,12 +56,12 @@ func GetResourceInfo() ResourceInfo {
 	if runtime.GOOS == "linux" {
 		info.MemoryTotal, info.MemoryUsed, info.MemoryFree = getLinuxMemory()
 		if info.MemoryTotal > 0 {
-			info.MemoryUsage = float64(info.MemoryUsed) / float64(info.MemoryTotal) * 100
+			info.MemoryUsage = math.Round(float64(info.MemoryUsed)/float64(info.MemoryTotal)*10000) / 100
 		}
 
 		info.DiskTotal, info.DiskUsed, info.DiskFree = getLinuxDisk()
 		if info.DiskTotal > 0 {
-			info.DiskUsage = float64(info.DiskUsed) / float64(info.DiskTotal) * 100
+			info.DiskUsage = math.Round(float64(info.DiskUsed)/float64(info.DiskTotal)*10000) / 100
 		}
 
 		info.CPUUsage = getLinuxCPU()
@@ -122,10 +124,39 @@ func getLinuxDisk() (total, used, free uint64) {
 }
 
 func getLinuxCPU() float64 {
-	out, err := exec.Command("bash", "-c", `top -bn1 | grep "Cpu(s)" | awk '{print $2}'`).Output()
-	if err != nil {
+	readStat := func() (idle, total uint64) {
+		out, err := os.ReadFile("/proc/stat")
+		if err != nil {
+			return
+		}
+		lines := strings.Split(string(out), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "cpu ") {
+				fields := strings.Fields(line)
+				if len(fields) < 5 {
+					return
+				}
+				var sum uint64
+				for _, f := range fields[1:] {
+					v, _ := strconv.ParseUint(f, 10, 64)
+					sum += v
+				}
+				idleVal, _ := strconv.ParseUint(fields[4], 10, 64)
+				return idleVal, sum
+			}
+		}
+		return
+	}
+
+	idle1, total1 := readStat()
+	time.Sleep(500 * time.Millisecond)
+	idle2, total2 := readStat()
+
+	totalDelta := total2 - total1
+	idleDelta := idle2 - idle1
+	if totalDelta == 0 {
 		return 0
 	}
-	val, _ := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-	return val
+	usage := float64(totalDelta-idleDelta) / float64(totalDelta) * 100
+	return math.Round(usage*100) / 100
 }

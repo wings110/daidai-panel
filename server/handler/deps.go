@@ -196,6 +196,26 @@ func (h *DepsHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"message": "卸载中"})
 }
 
+func (h *DepsHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.IDs) == 0 {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+
+	var deps []model.Dependency
+	database.DB.Where("id IN ? AND status NOT IN ?", req.IDs, []string{model.DepStatusInstalling, model.DepStatusRemoving}).Find(&deps)
+
+	for _, dep := range deps {
+		database.DB.Delete(&dep)
+		go forceUninstallDependency(dep.Type, dep.Name)
+	}
+
+	response.Success(c, gin.H{"message": fmt.Sprintf("已提交 %d 个依赖卸载", len(deps))})
+}
+
 func (h *DepsHandler) GetStatus(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
 
@@ -541,6 +561,7 @@ func (h *DepsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		deps.GET("", h.List)
 		deps.POST("", h.Create)
+		deps.POST("/batch-delete", h.BatchDelete)
 		deps.DELETE("/:id", h.Delete)
 		deps.GET("/:id/status", h.GetStatus)
 		deps.GET("/:id/log-stream", h.LogStream)

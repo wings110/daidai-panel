@@ -304,6 +304,10 @@ async function handleDeleteSSHKey(id: number) {
 
 <template>
   <div class="notifications-page">
+    <div class="page-header-block">
+      <h2>通知渠道</h2>
+      <span class="page-subtitle">配置任务执行结果通知和 SSH 密钥管理</span>
+    </div>
     <el-tabs v-model="activeTab">
       <el-tab-pane label="通知渠道" name="channels">
         <div class="tab-header">
@@ -429,6 +433,19 @@ async function handleDeleteSSHKey(id: number) {
 <style scoped lang="scss">
 .notifications-page {
   padding: 0;
+}
+
+.page-header-block {
+  margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
 }
 
 .tab-header {

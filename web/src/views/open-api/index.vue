@@ -1,7 +1,10 @@
 <template>
   <div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 16px">
-      <h3 style="margin: 0">Open API 管理</h3>
+    <div class="page-header">
+      <div>
+        <h2>Open API 管理</h2>
+        <span class="page-subtitle">创建和管理外部 API 调用应用密钥</span>
+      </div>
       <el-button type="primary" @click="showCreateDialog">创建应用</el-button>
     </div>
 
@@ -329,6 +332,22 @@ onMounted(loadApps)
 </script>
 
 <style scoped lang="scss">
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
+}
+
 .key-display {
   display: flex;
   align-items: center;

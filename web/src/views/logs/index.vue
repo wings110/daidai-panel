@@ -153,14 +153,16 @@ function handleSelectionChange(rows: any[]) {
 
 async function handleBatchDelete() {
   if (selectedIds.value.length === 0) return
-  await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条日志？`, '批量删除', { type: 'warning' })
   try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条日志？`, '批量删除', { type: 'warning' })
     await logApi.batchDelete(selectedIds.value)
     ElMessage.success('批量删除成功')
     selectedIds.value = []
     loadLogs()
-  } catch {
-    ElMessage.error('批量删除失败')
+  } catch (err: any) {
+    if (err !== 'cancel' && err?.toString() !== 'cancel') {
+      ElMessage.error(err?.response?.data?.error || '批量删除失败')
+    }
   }
 }
 
@@ -231,8 +233,11 @@ onBeforeUnmount(() => {
 <template>
   <div class="logs-page">
     <div class="page-header">
-      <h2>执行日志</h2>
-      <div style="display: flex; gap: 8px">
+      <div>
+        <h2>执行日志</h2>
+        <span class="page-subtitle">查看所有任务的历史执行记录</span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center">
         <el-button @click="toggleAutoRefresh" :type="autoRefresh ? 'primary' : 'default'">
           <el-icon><Refresh /></el-icon> {{ autoRefresh ? '停止刷新' : '自动刷新' }}
         </el-button>
@@ -263,9 +268,12 @@ onBeforeUnmount(() => {
       <el-table-column label="任务" min-width="150">
         <template #default="{ row }">{{ row.task_name || `任务#${row.task_id}` }}</template>
       </el-table-column>
-      <el-table-column label="状态" width="90" align="center">
+      <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">{{ getStatusText(row.status) }}</el-tag>
+          <el-tag :type="getStatusType(row.status)" size="small" :class="row.status === 2 ? 'tag-with-dot' : ''">
+            <span v-if="row.status === 2" class="pulse-dot"></span>
+            {{ getStatusText(row.status) }}
+          </el-tag>
         </template>
       </el-table-column>
       <el-table-column label="耗时" width="100" align="center">
@@ -348,7 +356,21 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  h2 { margin: 0; font-size: 20px; }
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
+}
+
+:deep(.tag-with-dot) {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
 }
 
 .filter-bar {
@@ -374,7 +396,7 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   max-height: 500px;
   overflow: auto;
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: var(--dd-font-mono);
   font-size: 13px;
   line-height: 1.6;
   white-space: pre-wrap;

@@ -14,7 +14,7 @@ export const logApi = {
   },
 
   batchDelete(ids: number[]) {
-    return request.delete('/logs/batch', { data: { ids } }) as Promise<{ message: string }>
+    return request.post('/logs/batch-delete', { ids }) as Promise<{ message: string }>
   },
 
   clean(days?: number) {

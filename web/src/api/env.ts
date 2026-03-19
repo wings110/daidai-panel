@@ -41,6 +41,10 @@ export const envApi = {
     return request.put('/envs/sort', { source_id: sourceId, target_id: targetId }) as Promise<{ message: string }>
   },
 
+  moveToTop(id: number) {
+    return request.put(`/envs/${id}/move-top`) as Promise<{ message: string }>
+  },
+
   groups() {
     return request.get('/envs/groups') as Promise<{ data: string[] }>
   },

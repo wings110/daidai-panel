@@ -46,4 +46,17 @@ YAML
 
 nginx
 
-exec /app/daidai-server
+shutdown() {
+    kill "$SERVER_PID" 2>/dev/null
+    exit 0
+}
+trap shutdown SIGTERM SIGINT
+
+while true; do
+    /app/daidai-server &
+    SERVER_PID=$!
+    wait $SERVER_PID
+    EXIT_CODE=$?
+    [ $EXIT_CODE -eq 0 ] && exit 0
+    sleep 2
+done

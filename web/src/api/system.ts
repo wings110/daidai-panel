@@ -9,6 +9,7 @@ export const systemApi = {
   panelSettings: () => request.get('/system/panel-settings'),
   checkUpdate: () => request.get('/system/check-update'),
   updatePanel: () => request.post('/system/update'),
+  restart: () => request.post('/system/restart'),
   panelLog: (params?: { lines?: number; keyword?: string }) =>
     request.get('/system/panel-log', { params }),
   backup: (password?: string) => request.post('/system/backup', { password }),

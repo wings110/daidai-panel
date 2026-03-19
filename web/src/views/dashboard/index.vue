@@ -20,9 +20,8 @@
               <CountUp :end-val="card.value" :duration="1.5" />
             </div>
           </div>
-          <div class="stat-icon-area" :style="{ color: card.color }">
-            <el-icon :size="20"><component :is="card.icon" /></el-icon>
-            <el-icon :size="12"><ArrowRight /></el-icon>
+          <div class="stat-icon-box" :style="{ '--icon-color': card.color }">
+            <el-icon :size="26"><component :is="card.icon" /></el-icon>
           </div>
         </div>
       </el-col>
@@ -223,9 +222,9 @@ const renderTrendChart = () => {
     xAxis: { type: 'category', data: stats.map((s: any) => s.date), axisLine: { lineStyle: { color: '#f0f0f0' } }, axisTick: { show: false }, axisLabel: { color: '#8c8c8c', fontSize: 11 } },
     yAxis: { type: 'value', minInterval: 1, axisLine: { lineStyle: { color: '#f0f0f0' } }, splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#8c8c8c', fontSize: 11 } },
     series: [
-      { name: '执行总数', type: 'line', data: stats.map((s: any) => (s.success || 0) + (s.failed || 0)), smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2, color: '#409EFF' }, itemStyle: { color: '#409EFF' }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(64,158,255,0.15)' }, { offset: 1, color: 'rgba(64,158,255,0)' }]) } },
-      { name: '成功', type: 'line', data: stats.map((s: any) => s.success || 0), smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2, color: '#67C23A' }, itemStyle: { color: '#67C23A' } },
-      { name: '失败', type: 'line', data: stats.map((s: any) => s.failed || 0), smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2, color: '#F56C6C' }, itemStyle: { color: '#F56C6C' } },
+      { name: '执行总数', type: 'line', data: stats.map((s: any) => (s.success || 0) + (s.failed || 0)), smooth: 0.6, symbol: 'circle', symbolSize: 7, lineStyle: { width: 2.5, color: '#409EFF' }, itemStyle: { color: '#409EFF', borderWidth: 2, borderColor: '#fff' }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(64,158,255,0.2)' }, { offset: 1, color: 'rgba(64,158,255,0)' }]) } },
+      { name: '成功', type: 'line', data: stats.map((s: any) => s.success || 0), smooth: 0.6, symbol: 'circle', symbolSize: 7, lineStyle: { width: 2.5, color: '#67C23A' }, itemStyle: { color: '#67C23A', borderWidth: 2, borderColor: '#fff' }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(103,194,58,0.15)' }, { offset: 1, color: 'rgba(103,194,58,0)' }]) } },
+      { name: '失败', type: 'line', data: stats.map((s: any) => s.failed || 0), smooth: 0.6, symbol: 'circle', symbolSize: 7, lineStyle: { width: 2.5, color: '#F56C6C' }, itemStyle: { color: '#F56C6C', borderWidth: 2, borderColor: '#fff' } },
     ],
   })
 }
@@ -314,12 +313,23 @@ onUnmounted(() => {
   line-height: 1.2;
 }
 
-.stat-icon-area {
+.stat-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  opacity: 0.5;
-  margin-top: 4px;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
+  color: var(--icon-color);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .stat-card:hover & {
+    transform: scale(1.1) rotate(8deg);
+  }
 }
 
 .card-title-bar {

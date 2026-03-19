@@ -5,7 +5,9 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -100,7 +102,16 @@ func (e *TaskExecutor) OnTaskFailed(req *ExecutionRequest, err error) {
 	})
 }
 
+func KillProcessGroup(p *os.Process) {
+	if p == nil {
+		return
+	}
+	killGroup(p)
+	p.Kill()
+}
+
 func KillProcessByPid(pid int) {
+	killGroupByPid(pid)
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		return
@@ -113,7 +124,7 @@ func (e *TaskExecutor) StopTask(taskID uint) bool {
 	defer e.processLock.Unlock()
 
 	if p, ok := e.runningProcesses[taskID]; ok {
-		p.Kill()
+		KillProcessGroup(p)
 		delete(e.runningProcesses, taskID)
 		return true
 	}
@@ -234,6 +245,13 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 		}
 	}
 
+	var outputCollector strings.Builder
+
+	onOutputWithCollect := func(line string) {
+		onOutput(line)
+		outputCollector.WriteString(line + "\n")
+	}
+
 	onOutput(fmt.Sprintf("=== 开始执行 [%s] ===", startTime.Format("2006-01-02 15:04:05")))
 
 	if task.TaskBefore != nil && *task.TaskBefore != "" {
@@ -245,6 +263,7 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 
 	retries := 0
 	var lastExitCode int
+	depInstalled := false
 
 	for retries <= task.MaxRetries {
 		if retries > 0 {
@@ -252,7 +271,8 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 			time.Sleep(time.Duration(task.RetryInterval) * time.Second)
 		}
 
-		result, process, err := RunCommand(task.Command, e.scriptsDir, timeout, envVars, maxLogSize, onOutput)
+		outputCollector.Reset()
+		result, process, err := RunCommand(task.Command, e.scriptsDir, timeout, envVars, maxLogSize, onOutputWithCollect)
 		if err != nil {
 			onOutput(fmt.Sprintf("[执行错误: %s]", err.Error()))
 			retries++
@@ -274,6 +294,15 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 			break
 		}
 
+		if !depInstalled && model.GetConfigInt("auto_install_deps", 1) == 1 {
+			collected := outputCollector.String()
+			if e.detectAndInstallDeps(collected, envVars, onOutput) {
+				depInstalled = true
+				onOutput("[依赖已安装，自动重试执行]")
+				continue
+			}
+		}
+
 		retries++
 	}
 
@@ -292,4 +321,62 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 
 	onOutput(fmt.Sprintf("=== 执行结束 [%s] 耗时 %.2f 秒 退出码 %d ===",
 		endTime.Format("2006-01-02 15:04:05"), duration, lastExitCode))
+}
+
+var (
+	pyModuleRe  = regexp.MustCompile(`(?:ModuleNotFoundError|ImportError):\s*No module named\s+'([^']+)'`)
+	nodeModuleRe = regexp.MustCompile(`(?:Cannot find module|Error \[ERR_MODULE_NOT_FOUND\].*)'([^']+)'`)
+)
+
+func (e *TaskExecutor) detectAndInstallDeps(output string, envVars map[string]string, onOutput OnOutputFunc) bool {
+	installed := false
+
+	depsDir := filepath.Join(config.C.Data.Dir, "deps")
+
+	if matches := pyModuleRe.FindStringSubmatch(output); len(matches) > 1 {
+		modName := strings.Split(matches[1], ".")[0]
+		onOutput(fmt.Sprintf("[自动安装 Python 依赖: %s]", modName))
+		venvPip := filepath.Join(depsDir, "python", "venv", "bin", "pip3")
+		if _, err := os.Stat(venvPip); err != nil {
+			venvPip = "pip3"
+		}
+		cmd := exec.Command(venvPip, "install", modName)
+		cmd.Env = buildEnvSlice(envVars)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			onOutput(fmt.Sprintf("[安装失败: %s]", strings.TrimSpace(string(out))))
+		} else {
+			onOutput(fmt.Sprintf("[安装成功: %s]", modName))
+			installed = true
+		}
+	}
+
+	if matches := nodeModuleRe.FindStringSubmatch(output); len(matches) > 1 {
+		modName := matches[1]
+		if strings.HasPrefix(modName, ".") || strings.HasPrefix(modName, "/") {
+			return installed
+		}
+		onOutput(fmt.Sprintf("[自动安装 Node.js 依赖: %s]", modName))
+		nodeDir := filepath.Join(depsDir, "nodejs")
+		os.MkdirAll(nodeDir, 0755)
+		cmd := exec.Command("npm", "install", modName, "--prefix", nodeDir)
+		cmd.Env = buildEnvSlice(envVars)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			onOutput(fmt.Sprintf("[安装失败: %s]", strings.TrimSpace(string(out))))
+		} else {
+			onOutput(fmt.Sprintf("[安装成功: %s]", modName))
+			installed = true
+		}
+	}
+
+	return installed
+}
+
+func buildEnvSlice(envVars map[string]string) []string {
+	env := os.Environ()
+	for k, v := range envVars {
+		env = append(env, k+"="+v)
+	}
+	return env
 }

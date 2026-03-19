@@ -152,7 +152,7 @@ func (s *Scheduler) StopRunningTask(taskID uint) bool {
 	defer s.processLock.Unlock()
 
 	if p, ok := s.runningProcesses[taskID]; ok {
-		p.Kill()
+		KillProcessGroup(p)
 		delete(s.runningProcesses, taskID)
 		return true
 	}

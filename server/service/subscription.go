@@ -6,12 +6,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"daidai-panel/config"
 	"daidai-panel/database"
 	"daidai-panel/model"
+	"daidai-panel/pkg/cron"
 )
 
 type PullCallback func(line string)
@@ -65,6 +67,10 @@ func PullSubscriptionWithCallback(sub *model.Subscription, onOutput PullCallback
 	}
 
 	emit(fmt.Sprintf("[完成] 耗时 %.2f 秒, 状态: %s", duration, map[int]string{0: "成功", 1: "失败"}[status]))
+
+	if status == 0 && sub.AutoAddTask {
+		autoCreateTasksFromScripts(sub, emit)
+	}
 
 	subLog := model.SubLog{
 		SubscriptionID: sub.ID,
@@ -185,4 +191,112 @@ func writeTempSSHKey(privateKey string) (string, error) {
 
 	os.Chmod(tmpFile.Name(), 0600)
 	return tmpFile.Name(), nil
+}
+
+var cronCommentRe = regexp.MustCompile(`(?i)#\s*cron\s*[:：]\s*(.+)`)
+
+func autoCreateTasksFromScripts(sub *model.Subscription, emit PullCallback) {
+	saveDir := sub.SaveDir
+	if saveDir == "" {
+		saveDir = sub.Alias
+		if saveDir == "" {
+			parts := strings.Split(sub.URL, "/")
+			saveDir = strings.TrimSuffix(parts[len(parts)-1], ".git")
+		}
+	}
+
+	scriptsDir := filepath.Join(config.C.Data.ScriptsDir, saveDir)
+	scriptExts := map[string]bool{".js": true, ".ts": true, ".py": true, ".sh": true}
+	created := 0
+
+	filepath.Walk(scriptsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+		if !scriptExts[ext] {
+			return nil
+		}
+
+		if sub.Whitelist != "" {
+			matched := false
+			for _, pattern := range strings.Split(sub.Whitelist, ",") {
+				pattern = strings.TrimSpace(pattern)
+				if pattern != "" && strings.Contains(info.Name(), pattern) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				return nil
+			}
+		}
+		if sub.Blacklist != "" {
+			for _, pattern := range strings.Split(sub.Blacklist, ",") {
+				pattern = strings.TrimSpace(pattern)
+				if pattern != "" && strings.Contains(info.Name(), pattern) {
+					return nil
+				}
+			}
+		}
+
+		cronExpr := extractCronFromFile(path)
+		if cronExpr == "" {
+			return nil
+		}
+
+		relPath, _ := filepath.Rel(config.C.Data.ScriptsDir, path)
+		taskName := strings.TrimSuffix(info.Name(), ext)
+
+		var existing model.Task
+		if database.DB.Where("command LIKE ?", "%"+relPath+"%").First(&existing).Error == nil {
+			return nil
+		}
+
+		task := model.Task{
+			Name:            taskName,
+			Command:         "task " + relPath,
+			CronExpression:  cronExpr,
+			Status:          model.TaskStatusEnabled,
+			Timeout:         86400,
+			NotifyOnFailure: true,
+		}
+		if database.DB.Create(&task).Error == nil {
+			GetSchedulerV2().AddJob(&task)
+			created++
+			emit(fmt.Sprintf("[自动添加任务] %s (cron: %s)", taskName, cronExpr))
+		}
+		return nil
+	})
+
+	if created > 0 {
+		emit(fmt.Sprintf("[共自动添加 %d 个定时任务]", created))
+	}
+}
+
+func extractCronFromFile(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	lineCount := 0
+	for scanner.Scan() {
+		lineCount++
+		if lineCount > 50 {
+			break
+		}
+		line := scanner.Text()
+		matches := cronCommentRe.FindStringSubmatch(line)
+		if len(matches) > 1 {
+			expr := strings.TrimSpace(matches[1])
+			result := cron.Parse(expr)
+			if result.Valid {
+				return expr
+			}
+		}
+	}
+	return ""
 }

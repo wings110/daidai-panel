@@ -1,5 +1,11 @@
 <template>
   <div class="deps-page">
+    <div class="page-header">
+      <div>
+        <h2>依赖管理</h2>
+        <span class="page-subtitle">安装和管理 Node.js、Python3、Linux 软件包依赖</span>
+      </div>
+    </div>
     <el-tabs v-model="activeTab" @tab-change="loadData">
       <el-tab-pane label="Node.js" name="nodejs" />
       <el-tab-pane label="Python3" name="python" />
@@ -11,6 +17,9 @@
       </el-button>
       <el-button @click="loadData" :loading="loading">
         <el-icon><Refresh /></el-icon>刷新
+      </el-button>
+      <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedIds.length === 0">
+        <el-icon><Delete /></el-icon>批量卸载
       </el-button>
       <el-button @click="openMirrorDialog">
         <el-icon><Setting /></el-icon>镜像源设置
@@ -30,7 +39,11 @@
         </div>
       </div>
     </div>
-    <el-table :data="depsList" v-loading="loading" border size="small">
+    <el-table :data="depsList" v-loading="loading" border size="small" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="40" />
+      <el-table-column label="#" width="55" align="center">
+        <template #default="{ $index }">{{ $index + 1 }}</template>
+      </el-table-column>
       <el-table-column prop="name" label="名称" min-width="200" />
       <el-table-column label="状态" width="120" align="center">
         <template #default="{ row }">
@@ -146,6 +159,7 @@ const createType = ref('nodejs')
 const createNames = ref('')
 const autoSplit = ref(true)
 const creating = ref(false)
+const selectedIds = ref<number[]>([])
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const showMirrorDialog = ref(false)
@@ -224,6 +238,25 @@ async function handleCreate() {
     loadData()
   } catch { ElMessage.error('提交安装失败') }
   finally { creating.value = false }
+}
+
+function handleSelectionChange(rows: any[]) {
+  selectedIds.value = rows.map(r => r.id)
+}
+
+async function handleBatchDelete() {
+  if (selectedIds.value.length === 0) return
+  try {
+    await ElMessageBox.confirm(`确定批量卸载选中的 ${selectedIds.value.length} 个依赖？`, '批量卸载', { type: 'warning' })
+    await depsApi.batchDelete(selectedIds.value)
+    ElMessage.success('批量卸载已提交')
+    selectedIds.value = []
+    loadData()
+  } catch (err: any) {
+    if (err !== 'cancel' && err?.toString() !== 'cancel') {
+      ElMessage.error(err?.response?.data?.error || '批量卸载失败')
+    }
+  }
 }
 
 async function handleDelete(row: any) {
@@ -338,6 +371,20 @@ onBeforeUnmount(() => { closeSSE(); if (refreshTimer) clearInterval(refreshTimer
 
 <style scoped lang="scss">
 .deps-page { padding: 0; }
+
+.page-header {
+  margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
+}
+
 .deps-toolbar {
   display: flex;
   align-items: center;

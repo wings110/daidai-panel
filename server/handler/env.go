@@ -53,7 +53,7 @@ func (h *EnvHandler) List(c *gin.Context) {
 	query.Count(&total)
 
 	var envs []model.EnvVar
-	query.Order("position ASC, created_at DESC").
+	query.Order("position ASC, created_at ASC").
 		Offset((page - 1) * pageSize).Limit(pageSize).Find(&envs)
 
 	data := make([]map[string]interface{}, len(envs))
@@ -551,6 +551,21 @@ func (h *EnvHandler) Import(c *gin.Context) {
 	})
 }
 
+func (h *EnvHandler) MoveToTop(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	var env model.EnvVar
+	if err := database.DB.First(&env, id).Error; err != nil {
+		response.NotFound(c, "环境变量不存在")
+		return
+	}
+
+	var minPos float64
+	database.DB.Model(&model.EnvVar{}).Select("COALESCE(MIN(position), 10000)").Scan(&minPos)
+	database.DB.Model(&env).Update("position", minPos-1000)
+
+	response.Success(c, gin.H{"message": "已置顶"})
+}
+
 func (h *EnvHandler) RegisterRoutes(r *gin.RouterGroup) {
 	envs := r.Group("/envs", middleware.JWTAuth())
 	{
@@ -565,6 +580,7 @@ func (h *EnvHandler) RegisterRoutes(r *gin.RouterGroup) {
 		envs.PUT("/batch/disable", h.BatchDisable)
 		envs.GET("/export", h.Export)
 		envs.PUT("/sort", h.Sort)
+		envs.PUT("/:id/move-top", h.MoveToTop)
 		envs.GET("/groups", h.Groups)
 		envs.GET("/export-all", h.ExportAll)
 		envs.POST("/export-files", h.ExportFiles)

@@ -33,6 +33,8 @@ const backupPassword = ref('')
 const showRestoreDialog = ref(false)
 const restoreFilename = ref('')
 const restorePassword = ref('')
+const restoreCountdown = ref(0)
+let restoreTimer: ReturnType<typeof setInterval> | null = null
 
 const oldPassword = ref('')
 const newPassword = ref('')
@@ -290,6 +292,45 @@ async function handleUpdatePanel() {
   }
 }
 
+async function handleRestartPanel() {
+  try {
+    await ElMessageBox.confirm('确定要重启面板吗？重启期间服务将短暂中断。', '重启面板', {
+      confirmButtonText: '确认重启',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await systemApi.restart()
+    waitForRestart()
+  } catch {}
+}
+
+function waitForRestart() {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '面板正在重启，请稍候...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+  let attempts = 0
+  setTimeout(() => {
+    const poll = setInterval(async () => {
+      attempts++
+      try {
+        const res = await fetch('/', { method: 'HEAD' })
+        if (res.ok) {
+          clearInterval(poll)
+          loading.close()
+          window.location.reload()
+        }
+      } catch {}
+      if (attempts >= 60) {
+        clearInterval(poll)
+        loading.close()
+        ElMessage.warning('重启超时，请手动刷新页面')
+      }
+    }, 2000)
+  }, 3000)
+}
+
 async function loadBackups() {
   backupsLoading.value = true
   try {
@@ -353,11 +394,46 @@ async function handleRestoreBackup(filename: string) {
 async function confirmRestore() {
   try {
     await systemApi.restore(restoreFilename.value, restorePassword.value)
-    ElMessage.success('恢复成功，请重启面板')
     showRestoreDialog.value = false
+    restoreCountdown.value = 10
+    ElMessageBox.alert(
+      '',
+      '恢复成功',
+      {
+        confirmButtonText: '立即重启',
+        type: 'success',
+        showClose: false,
+        closeOnClickModal: false,
+        closeOnPressEscape: false,
+        message: `数据恢复成功，面板将在 ${restoreCountdown.value} 秒后自动重启...`,
+        callback: () => {
+          if (restoreTimer) { clearInterval(restoreTimer); restoreTimer = null }
+          doRestart()
+        }
+      }
+    )
+    restoreTimer = setInterval(() => {
+      restoreCountdown.value--
+      const msgBox = document.querySelector('.el-message-box__message p')
+      if (msgBox) {
+        msgBox.textContent = `数据恢复成功，面板将在 ${restoreCountdown.value} 秒后自动重启...`
+      }
+      if (restoreCountdown.value <= 0) {
+        if (restoreTimer) { clearInterval(restoreTimer); restoreTimer = null }
+        ElMessageBox.close()
+        doRestart()
+      }
+    }, 1000)
   } catch {
     ElMessage.error('恢复失败')
   }
+}
+
+async function doRestart() {
+  try {
+    await systemApi.restart()
+  } catch {}
+  waitForRestart()
 }
 
 async function handleDeleteBackup(filename: string) {
@@ -579,7 +655,10 @@ onMounted(() => {
 <template>
   <div class="settings-page">
     <div class="page-header">
-      <h2 class="page-title">系统设置</h2>
+      <div>
+        <h2 class="page-title">系统设置</h2>
+        <span class="page-subtitle">管理面板配置、安全策略和数据备份</span>
+      </div>
       <el-button @click="handleRefresh">
         <el-icon><Refresh /></el-icon>刷新
       </el-button>
@@ -607,6 +686,9 @@ onMounted(() => {
             <div class="overview-buttons">
               <el-button type="primary" :loading="checkingUpdate" @click="handleCheckUpdate">
                 <el-icon><Refresh /></el-icon>检查系统更新
+              </el-button>
+              <el-button type="warning" @click="handleRestartPanel">
+                <el-icon><Refresh /></el-icon>重启面板
               </el-button>
               <el-button @click="openGitHub">
                 <svg viewBox="0 0 16 16" width="16" height="16" style="margin-right: 4px; vertical-align: middle; fill: currentColor">
@@ -1204,8 +1286,16 @@ onMounted(() => {
 
 .page-title {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0;
+  color: var(--el-text-color-primary);
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  display: block;
+  margin-top: 2px;
 }
 
 .mt-card {

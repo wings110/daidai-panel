@@ -237,6 +237,7 @@ func (h *LogHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		logs.GET("", middleware.JWTAuth(), h.List)
 		logs.DELETE("/batch", middleware.JWTAuth(), h.BatchDelete)
+		logs.POST("/batch-delete", middleware.JWTAuth(), h.BatchDelete)
 		logs.DELETE("/clean", middleware.JWTAuth(), h.Clean)
 		logs.GET("/:id/stream", h.Stream)
 		logs.GET("/:id", middleware.JWTAuth(), h.Detail)

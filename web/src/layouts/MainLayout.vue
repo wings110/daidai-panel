@@ -125,7 +125,7 @@ async function loadPanelSettings() {
           <span v-if="isMobile" class="mobile-title">{{ panelTitle }}</span>
         </div>
         <div class="header-right">
-          <el-button :icon="themeStore.isDark ? 'Sunny' : 'Moon'" text circle @click="themeStore.toggleTheme" />
+          <el-button :icon="themeStore.isDark ? 'Sunny' : 'Moon'" text circle class="theme-btn" @click="themeStore.toggleTheme" />
           <el-dropdown trigger="click">
             <span class="user-dropdown">
               <el-icon><User /></el-icon>
@@ -274,20 +274,34 @@ async function loadPanelSettings() {
   }
 }
 
+.theme-btn {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+
+  &:hover {
+    transform: rotate(20deg) scale(1.15) !important;
+  }
+
+  &:active {
+    transform: rotate(0deg) scale(0.95) !important;
+  }
+}
+
 .page-fade-enter-active {
-  animation: pageEnter 0.2s ease-out;
+  animation: pageEnter 0.22s ease-out;
 }
 
 .page-fade-leave-active {
-  animation: pageFadeOut 0.1s ease-in;
+  animation: pageFadeOut 0.12s ease-in;
 }
 
 @keyframes pageEnter {
   from {
     opacity: 0;
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 

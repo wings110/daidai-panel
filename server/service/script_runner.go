@@ -88,7 +88,7 @@ func RunCommand(command, scriptsDir string, timeout int, envVars map[string]stri
 			}
 		}
 	case <-timer.C:
-		cmd.Process.Kill()
+		KillProcessGroup(cmd.Process)
 		<-done
 		<-waitCh
 		returnCode = -1
@@ -202,6 +202,8 @@ func buildCmd(interpreter, fullPath, scriptsDir string, envVars map[string]strin
 	cmd.Dir = scriptsDir
 	cmd.Env = buildEnv(envVars)
 
+	setPgid(cmd)
+
 	return cmd
 }
 
@@ -245,6 +247,7 @@ func RunInlineScript(content, scriptsDir string, envVars map[string]string, time
 	cmd := exec.Command("bash", tmpFile)
 	cmd.Dir = scriptsDir
 	cmd.Env = buildEnv(envVars)
+	setPgid(cmd)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -277,7 +280,7 @@ func RunInlineScript(content, scriptsDir string, envVars map[string]string, time
 	case err := <-waitCh:
 		return err
 	case <-timer.C:
-		cmd.Process.Kill()
+		KillProcessGroup(cmd.Process)
 		<-waitCh
 		return fmt.Errorf("钩子脚本超时，已超过 %d 秒", timeout)
 	}
@@ -298,6 +301,7 @@ func RunHookScript(scriptName, scriptsDir string, envVars map[string]string, onO
 	cmd := exec.Command("bash", hookPath)
 	cmd.Dir = scriptsDir
 	cmd.Env = buildEnv(envVars)
+	setPgid(cmd)
 
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Stderr = cmd.Stdout
@@ -329,7 +333,7 @@ func RunHookScript(scriptName, scriptsDir string, envVars map[string]string, onO
 	select {
 	case <-waitCh:
 	case <-timer.C:
-		cmd.Process.Kill()
+		KillProcessGroup(cmd.Process)
 		<-waitCh
 	}
 }

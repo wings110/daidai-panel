@@ -113,15 +113,32 @@ function handleSearch() {
 
 function getStatusType(status: number) {
   if (status === 0) return 'info'
+  if (status === 0.5) return 'warning'
   if (status === 2) return 'warning'
   return 'success'
 }
 
 function getStatusText(status: number) {
-  if (status === 0) return '已禁用'
+  if (status === 0) return '禁用中'
   if (status === 0.5) return '排队中'
   if (status === 2) return '运行中'
-  return '已启用'
+  return '空闲中'
+}
+
+function formatTime(time: string | null) {
+  if (!time) return '-'
+  const d = new Date(time)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function extractScriptPath(command: string) {
+  const match = command.match(/(?:task\s+|node\s+|python3?\s+|bash\s+|sh\s+|ts-node\s+)?(\S+\.(?:js|ts|py|sh))/i)
+  return match ? match[1] : null
+}
+
+function navigateToScript(path: string) {
+  router.push({ path: '/scripts', query: { file: path } })
 }
 
 function getRunStatusType(status: number | null) {
@@ -345,7 +362,10 @@ async function handleImport(event: Event) {
 <template>
   <div class="tasks-page">
     <div class="page-header">
-      <h2>定时任务</h2>
+      <div>
+        <h2>定时任务</h2>
+        <span class="page-subtitle">管理和调度所有定时执行任务</span>
+      </div>
       <div class="header-actions">
         <el-button type="primary" @click="openCreate">
           <el-icon><Plus /></el-icon> 新建任务
@@ -402,7 +422,13 @@ async function handleImport(event: Event) {
       </el-table-column>
       <el-table-column label="命令" min-width="160" show-overflow-tooltip>
         <template #default="{ row }">
-          <code class="command-text">{{ row.command }}</code>
+          <code class="command-text">
+            <template v-if="extractScriptPath(row.command)">
+              <span>{{ row.command.replace(extractScriptPath(row.command), '') }}</span>
+              <span class="script-link" @click="navigateToScript(extractScriptPath(row.command)!)">{{ extractScriptPath(row.command) }}</span>
+            </template>
+            <template v-else>{{ row.command }}</template>
+          </code>
         </template>
       </el-table-column>
       <el-table-column label="定时规则" width="130">
@@ -412,11 +438,24 @@ async function handleImport(event: Event) {
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="90" align="center">
+      <el-table-column label="状态" width="100" align="center">
         <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)" size="small">
+          <el-tag :type="getStatusType(row.status)" size="small" :class="row.status === 2 ? 'tag-with-dot' : ''">
+            <span v-if="row.status === 2" class="pulse-dot"></span>
             {{ getStatusText(row.status) }}
           </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="最后运行" width="130" align="center">
+        <template #default="{ row }">
+          <span v-if="row.last_run_at" class="time-text">{{ formatTime(row.last_run_at) }}</span>
+          <span v-else class="text-muted">-</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="下次运行" width="130" align="center">
+        <template #default="{ row }">
+          <span v-if="row.next_run_at" class="time-text">{{ formatTime(row.next_run_at) }}</span>
+          <span v-else class="text-muted">-</span>
         </template>
       </el-table-column>
       <el-table-column label="上次结果" width="90" align="center">
@@ -511,12 +550,25 @@ async function handleImport(event: Event) {
   align-items: center;
   margin-bottom: 20px;
 
-  h2 { margin: 0; font-size: 22px; font-weight: 600; }
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
 
   .header-actions {
     display: flex;
     gap: 10px;
   }
+}
+
+:deep(.tag-with-dot) {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
 }
 
 .filter-bar {
@@ -552,6 +604,18 @@ async function handleImport(event: Event) {
   font-family: var(--dd-font-mono);
   font-size: 13px;
   color: var(--el-text-color-secondary);
+
+  .script-link {
+    color: var(--el-color-primary);
+    cursor: pointer;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.time-text {
+  font-family: var(--dd-font-mono);
+  font-size: 12px;
+  color: var(--el-text-color-regular);
 }
 
 .text-muted {

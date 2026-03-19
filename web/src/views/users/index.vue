@@ -117,7 +117,10 @@ function getRoleName(role: string) {
 <template>
   <div class="users-page">
     <div class="page-header">
-      <h3 style="margin: 0">用户管理</h3>
+      <div>
+        <h2>用户管理</h2>
+        <span class="page-subtitle">管理系统用户账户及权限角色</span>
+      </div>
       <el-button type="primary" @click="openCreate">
         <el-icon><Plus /></el-icon>新建用户
       </el-button>
@@ -219,5 +222,14 @@ function getRoleName(role: string) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
 }
 </style>

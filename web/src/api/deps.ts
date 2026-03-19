@@ -13,6 +13,10 @@ export const depsApi = {
     return request.delete(`/deps/${id}`, { params: force ? { force: true } : undefined }) as Promise<{ message: string }>
   },
 
+  batchDelete(ids: number[]) {
+    return request.post('/deps/batch-delete', { ids }) as Promise<{ message: string }>
+  },
+
   getStatus(id: number) {
     return request.get(`/deps/${id}/status`) as Promise<{ data: any }>
   },

@@ -16,6 +16,9 @@ const selectedIds = ref<number[]>([])
 const showEditDialog = ref(false)
 const showLogDialog = ref(false)
 const isCreate = ref(true)
+const qlCommand = ref('')
+
+const GITHUB_MIRROR = 'https://docker.1ms.run/'
 
 const editForm = ref({
   id: 0,
@@ -44,6 +47,7 @@ const logLoading = ref(false)
 const showPullLog = ref(false)
 const pullLogLines = ref<string[]>([])
 const pullRunning = ref(false)
+const pullingSubId = ref<number | null>(null)
 let pullEventSource: EventSource | null = null
 const pullLogRef = ref<HTMLElement>()
 
@@ -87,12 +91,69 @@ function handleSearch() {
 
 function openCreate() {
   isCreate.value = true
+  qlCommand.value = ''
   editForm.value = {
     id: 0, name: '', type: 'git-repo', url: '', branch: '', schedule: '',
     whitelist: '', blacklist: '', depend_on: '', auto_add_task: false,
     auto_del_task: false, save_dir: '', ssh_key_id: null, alias: ''
   }
   showEditDialog.value = true
+}
+
+function addGithubMirror(url: string): string {
+  if (!url) return url
+  const githubPattern = /^https?:\/\/github\.com\//
+  if (githubPattern.test(url) && !url.includes(GITHUB_MIRROR)) {
+    return url.replace(/^https?:\/\/github\.com\//, GITHUB_MIRROR + 'https://github.com/')
+  }
+  return url
+}
+
+function parseQLCommand() {
+  const cmd = qlCommand.value.trim()
+  if (!cmd) return
+
+  const repoMatch = cmd.match(/ql\s+repo\s+"?([^\s"]+)"?\s*"?([^"]*)"?\s*"?([^"]*)"?\s*"?([^"]*)"?\s*"?([^"]*)"?/)
+  if (repoMatch) {
+    const [, url = '', whitelist, blacklist, branch, dependOn] = repoMatch
+    const repoName = url.replace(/\.git$/, '').split('/').pop() || 'repo'
+    editForm.value.type = 'git-repo'
+    editForm.value.url = addGithubMirror(url)
+    editForm.value.name = repoName
+    editForm.value.whitelist = whitelist || ''
+    editForm.value.blacklist = blacklist || ''
+    editForm.value.branch = branch || ''
+    editForm.value.depend_on = dependOn || ''
+    editForm.value.auto_add_task = true
+    ElMessage.success('已识别 ql repo 命令')
+    qlCommand.value = ''
+    return
+  }
+
+  const rawMatch = cmd.match(/ql\s+raw\s+"?([^\s"]+)"?/)
+  if (rawMatch) {
+    const url = rawMatch[1] || ''
+    const fileName = url.split('/').pop() || 'file'
+    editForm.value.type = 'single-file'
+    editForm.value.url = addGithubMirror(url)
+    editForm.value.name = fileName.replace(/\.[^/.]+$/, '')
+    editForm.value.auto_add_task = true
+    ElMessage.success('已识别 ql raw 命令')
+    qlCommand.value = ''
+    return
+  }
+
+  if (cmd.includes('github.com') || cmd.includes('.git') || cmd.startsWith('http')) {
+    editForm.value.url = addGithubMirror(cmd)
+    const repoName = cmd.replace(/\.git$/, '').split('/').pop() || ''
+    if (repoName) editForm.value.name = repoName
+    editForm.value.type = cmd.endsWith('.js') || cmd.endsWith('.py') || cmd.endsWith('.ts') || cmd.endsWith('.sh') ? 'single-file' : 'git-repo'
+    ElMessage.success('已识别链接')
+    qlCommand.value = ''
+    return
+  }
+
+  ElMessage.warning('无法识别命令格式，支持 ql repo/raw 命令或直接粘贴链接')
 }
 
 function openEdit(row: any) {
@@ -112,6 +173,17 @@ async function handleSave() {
   if (!editForm.value.name.trim() || !editForm.value.url.trim()) {
     ElMessage.warning('名称和 URL 不能为空')
     return
+  }
+  const githubDirect = /^https?:\/\/github\.com\//.test(editForm.value.url) && !editForm.value.url.includes(GITHUB_MIRROR)
+  if (githubDirect) {
+    try {
+      await ElMessageBox.confirm(
+        '检测到 GitHub 直连地址，是否自动添加镜像加速？\n加速地址: ' + GITHUB_MIRROR,
+        '镜像加速',
+        { confirmButtonText: '添加加速', cancelButtonText: '保持原样', type: 'info' }
+      )
+      editForm.value.url = addGithubMirror(editForm.value.url)
+    } catch { /* keep original */ }
   }
   try {
     const data = { ...editForm.value }
@@ -152,13 +224,25 @@ async function handleToggle(row: any) {
 }
 
 async function handlePull(id: number) {
+  if (pullingSubId.value === id && pullRunning.value) {
+    showPullLog.value = true
+    return
+  }
   try {
     await subscriptionApi.pull(id)
     pullLogLines.value = []
     pullRunning.value = true
+    pullingSubId.value = id
     showPullLog.value = true
     connectPullStream(id)
   } catch (err: any) {
+    if (err?.response?.data?.error?.includes('拉取中')) {
+      pullRunning.value = true
+      pullingSubId.value = id
+      showPullLog.value = true
+      connectPullStream(id)
+      return
+    }
     ElMessage.error(err?.response?.data?.error || '拉取失败')
   }
 }
@@ -177,6 +261,7 @@ function connectPullStream(id: number) {
   }
   pullEventSource.addEventListener('done', () => {
     pullRunning.value = false
+    pullingSubId.value = null
     closePullStream()
     loadData()
   })
@@ -240,6 +325,10 @@ function getStatusText(status: number) {
 <template>
   <div class="subscriptions-page">
     <div class="page-header">
+      <div>
+        <h2>订阅管理</h2>
+        <span class="page-subtitle">管理 Git 仓库和单文件自动拉取订阅</span>
+      </div>
       <div class="header-left">
         <el-input
           v-model="keyword"
@@ -336,6 +425,12 @@ function getStatusText(status: number) {
 
     <el-dialog v-model="showEditDialog" :title="isCreate ? '新建订阅' : '编辑订阅'" width="600px">
       <el-form :model="editForm" label-width="100px">
+        <el-form-item v-if="isCreate" label="一键识别">
+          <div style="display: flex; gap: 8px; width: 100%">
+            <el-input v-model="qlCommand" placeholder="粘贴 ql repo/raw 命令或仓库链接" clearable @keyup.enter="parseQLCommand" />
+            <el-button type="primary" @click="parseQLCommand">识别</el-button>
+          </div>
+        </el-form-item>
         <el-form-item label="名称">
           <el-input v-model="editForm.name" placeholder="订阅名称" />
         </el-form-item>
@@ -409,7 +504,9 @@ function getStatusText(status: number) {
     <el-dialog v-model="showPullLog" title="拉取日志" width="700px" :close-on-click-modal="false" @close="closePullStream">
       <div ref="pullLogRef" class="pull-log-content">
         <div v-for="(line, i) in pullLogLines" :key="i" class="pull-log-line">{{ line }}</div>
-        <div v-if="pullRunning" class="pull-log-line pull-running">拉取中...</div>
+        <div v-if="pullRunning" class="pull-log-line pull-running">
+      <span class="pull-spinner"></span> 拉取中...
+    </div>
         <el-empty v-if="!pullRunning && pullLogLines.length === 0" description="暂无输出" :image-size="60" />
       </div>
       <template #footer>
@@ -431,6 +528,17 @@ function getStatusText(status: number) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
 
   .header-left {
     display: flex;
@@ -476,10 +584,19 @@ function getStatusText(status: number) {
 
 .pull-running {
   color: #e6a23c;
-  animation: blink 1s infinite;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-@keyframes blink {
-  50% { opacity: 0.5; }
+.pull-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(230, 162, 60, 0.3);
+  border-top-color: #e6a23c;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 </style>

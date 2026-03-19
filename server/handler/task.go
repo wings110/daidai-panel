@@ -63,7 +63,14 @@ func (h *TaskHandler) List(c *gin.Context) {
 
 	data := make([]map[string]interface{}, len(tasks))
 	for i, t := range tasks {
-		data[i] = t.ToDict()
+		d := t.ToDict()
+		if t.Status != model.TaskStatusDisabled && t.CronExpression != "" {
+			nextTimes := cron.NextRunTimes(t.CronExpression, 1)
+			if len(nextTimes) > 0 {
+				d["next_run_at"] = nextTimes[0]
+			}
+		}
+		data[i] = d
 	}
 
 	response.Paginated(c, data, total, page, pageSize)

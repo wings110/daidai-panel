@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onBeforeUnmount, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { scriptApi } from '@/api/script'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MonacoEditor from '@/components/MonacoEditor.vue'
@@ -13,6 +13,7 @@ interface TreeNode {
 }
 
 const router = useRouter()
+const route = useRoute()
 
 const fileTree = ref<TreeNode[]>([])
 const selectedFile = ref('')
@@ -143,6 +144,12 @@ function handleKeyDown(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+  const fileParam = route.query.file as string
+  if (fileParam) {
+    selectedFile.value = fileParam
+    loadFileContent(fileParam)
+    router.replace({ path: '/scripts' })
+  }
 })
 
 onBeforeUnmount(() => {
@@ -580,12 +587,23 @@ async function handleStopRunner() {
 
 function getFileIcon(node: TreeNode) {
   if (!node.isLeaf) return 'Folder'
+  return 'Document'
+}
+
+function getFileIconColor(node: TreeNode): string {
+  if (!node.isLeaf) return '#e6a23c'
   const ext = node.title.split('.').pop()?.toLowerCase()
   switch (ext) {
-    case 'js': case 'ts': return 'Document'
-    case 'py': return 'Document'
-    case 'sh': return 'Document'
-    default: return 'Document'
+    case 'js': return '#f0db4f'
+    case 'ts': return '#3178c6'
+    case 'py': return '#4b8bbe'
+    case 'sh': return '#4eaa25'
+    case 'json': return '#e37e36'
+    case 'yaml': case 'yml': return '#cb171e'
+    case 'md': return '#083fa1'
+    case 'html': return '#e34c26'
+    case 'css': return '#264de4'
+    default: return 'var(--el-text-color-secondary)'
   }
 }
 
@@ -642,10 +660,11 @@ function getFileName(path: string) {
         >
           <template #default="{ data }">
             <div class="tree-node">
-              <el-icon size="14">
+              <el-icon size="14" :style="{ color: getFileIconColor(data) }">
                 <component :is="getFileIcon(data)" />
               </el-icon>
               <span class="tree-node-label">{{ data.title }}</span>
+              <span v-if="data.isLeaf && data.title.includes('.')" class="file-ext-badge">{{ data.title.split('.').pop()?.toUpperCase() }}</span>
               <div class="tree-node-actions" @click.stop>
                 <el-dropdown trigger="click" size="small">
                   <el-icon class="more-btn" :size="18"><MoreFilled /></el-icon>
@@ -1013,7 +1032,26 @@ function getFileName(path: string) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 14px;
+    font-size: 13px;
+  }
+
+  .file-ext-badge {
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--dd-font-mono);
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--el-fill-color);
+    color: var(--el-text-color-secondary);
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+    line-height: 1.4;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  &:hover .file-ext-badge {
+    opacity: 1;
   }
 
   .tree-node-actions {

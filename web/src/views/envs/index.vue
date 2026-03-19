@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { envApi } from '@/api/env'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import Sortable from 'sortablejs'
 
 const envList = ref<any[]>([])
 const loading = ref(false)
@@ -10,6 +11,7 @@ const page = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
 const currentGroup = ref('')
+const groupFilter = ref('')
 const groups = ref<string[]>([])
 const selectedIds = ref<number[]>([])
 
@@ -28,17 +30,21 @@ const showExportDialog = ref(false)
 const exportFormat = ref('shell')
 const exportContent = ref('')
 
+const tableRef = ref()
+
 async function loadData() {
   loading.value = true
   try {
+    const group = groupFilter.value || currentGroup.value || undefined
     const res = await envApi.list({
       keyword: keyword.value || undefined,
-      group: currentGroup.value || undefined,
+      group,
       page: page.value,
       page_size: pageSize.value
     })
     envList.value = res.data || []
     total.value = res.total || 0
+    nextTick(() => initSortable())
   } catch {
     ElMessage.error('加载环境变量失败')
   } finally {
@@ -58,13 +64,44 @@ onMounted(() => {
   loadGroups()
 })
 
+function initSortable() {
+  const el = document.querySelector('.env-table .el-table__body-wrapper tbody')
+  if (!el) return
+  Sortable.create(el as HTMLElement, {
+    animation: 150,
+    handle: '.drag-handle',
+    ghostClass: 'sortable-ghost',
+    onEnd: async (evt: any) => {
+      const { oldIndex, newIndex } = evt
+      if (oldIndex === newIndex) return
+      const sourceItem = envList.value[oldIndex]
+      const targetItem = envList.value[newIndex]
+      if (!sourceItem || !targetItem) return
+      const item = envList.value.splice(oldIndex, 1)[0]
+      envList.value.splice(newIndex, 0, item)
+      try {
+        await envApi.sort(sourceItem.id, targetItem.id)
+      } catch {
+        ElMessage.error('排序失败')
+        loadData()
+      }
+    }
+  })
+}
+
 function handleSearch() {
+  page.value = 1
+  loadData()
+}
+
+function handleGroupSelect() {
   page.value = 1
   loadData()
 }
 
 function handleGroupFilter(group: string) {
   currentGroup.value = currentGroup.value === group ? '' : group
+  groupFilter.value = ''
   page.value = 1
   loadData()
 }
@@ -104,6 +141,16 @@ async function handleSave() {
     loadGroups()
   } catch {
     ElMessage.error(isCreate.value ? '创建失败' : '更新失败')
+  }
+}
+
+async function handleMoveToTop(row: any) {
+  try {
+    await envApi.moveToTop(row.id)
+    ElMessage.success('已置顶')
+    loadData()
+  } catch {
+    ElMessage.error('置顶失败')
   }
 }
 
@@ -275,6 +322,10 @@ function copyExport() {
 
 <template>
   <div class="envs-page">
+    <div class="page-title-bar">
+      <h2>环境变量</h2>
+      <span class="page-subtitle">管理运行时使用的全局环境变量配置</span>
+    </div>
     <div class="page-header">
       <div class="header-left">
         <el-input
@@ -287,17 +338,9 @@ function copyExport() {
         >
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
-        <div class="group-tags" v-if="groups.length > 0">
-          <el-tag
-            v-for="g in groups"
-            :key="g"
-            :effect="currentGroup === g ? 'dark' : 'plain'"
-            class="group-tag"
-            @click="handleGroupFilter(g)"
-          >
-            {{ g }}
-          </el-tag>
-        </div>
+        <el-select v-model="groupFilter" placeholder="分组筛选" clearable style="width: 150px" @change="handleGroupSelect">
+          <el-option v-for="g in groups" :key="g" :label="g" :value="g" />
+        </el-select>
       </div>
       <div class="header-right">
         <el-button type="primary" @click="openCreate">
@@ -335,13 +378,25 @@ function copyExport() {
     </div>
 
     <el-table
+      ref="tableRef"
       :data="envList"
       v-loading="loading"
       @selection-change="handleSelectionChange"
       stripe
       class="env-table"
+      row-key="id"
     >
-      <el-table-column type="selection" width="50" />
+      <el-table-column type="selection" width="40" />
+      <el-table-column label="#" width="55" align="center">
+        <template #default="{ $index }">
+          <span class="row-index">{{ (page - 1) * pageSize + $index + 1 }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column width="40" align="center">
+        <template #default>
+          <el-icon class="drag-handle"><Rank /></el-icon>
+        </template>
+      </el-table-column>
       <el-table-column prop="name" label="变量名" min-width="160">
         <template #default="{ row }">
           <span class="env-name">{{ row.name }}</span>
@@ -363,9 +418,10 @@ function copyExport() {
           />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openEdit(row)">编辑</el-button>
+          <el-button size="small" text type="warning" @click="handleMoveToTop(row)">置顶</el-button>
           <el-button size="small" text type="danger" @click="handleDelete(row.id)">删除</el-button>
         </template>
       </el-table-column>
@@ -383,7 +439,7 @@ function copyExport() {
       />
     </div>
 
-    <el-dialog v-model="showEditDialog" :title="isCreate ? '新建环境变量' : '编辑环境变量'" width="500px">
+    <el-dialog v-model="showEditDialog" :title="isCreate ? '新建环境变量' : '编辑环境变量'" width="500px" :close-on-click-modal="false">
       <el-form :model="editForm" label-width="80px">
         <el-form-item label="变量名">
           <el-input v-model="editForm.name" placeholder="变量名 (如: API_KEY)" />
@@ -474,6 +530,19 @@ function copyExport() {
   padding: 0;
 }
 
+.page-title-bar {
+  margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--el-text-color-primary); }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    display: block;
+    margin-top: 2px;
+  }
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -496,21 +565,29 @@ function copyExport() {
   }
 }
 
-.group-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-
-  .group-tag {
-    cursor: pointer;
-    &:hover { opacity: 0.8; }
-  }
-}
-
 .env-name {
   font-family: var(--dd-font-mono);
   font-size: 13px;
   color: var(--el-color-primary);
+}
+
+.row-index {
+  font-family: var(--dd-font-mono);
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--el-text-color-placeholder);
+  font-size: 16px;
+  &:hover { color: var(--el-color-primary); }
+  &:active { cursor: grabbing; }
+}
+
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--el-color-primary-light-9) !important;
 }
 
 .env-table {
