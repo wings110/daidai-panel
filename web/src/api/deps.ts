@@ -29,10 +29,10 @@ export const depsApi = {
   npmList: () => request.get('/deps/npm'),
 
   getMirrors() {
-    return request.get('/deps/mirrors') as Promise<{ pip_mirror: string; npm_mirror: string }>
+    return request.get('/deps/mirrors') as Promise<{ pip_mirror: string; npm_mirror: string; linux_mirror: string }>
   },
 
-  setMirrors(data: { pip_mirror?: string; npm_mirror?: string }) {
+  setMirrors(data: { pip_mirror?: string; npm_mirror?: string; linux_mirror?: string }) {
     return request.put('/deps/mirrors', data) as Promise<{ message: string }>
   },
 }
