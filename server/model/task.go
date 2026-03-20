@@ -28,6 +28,7 @@ type Task struct {
 	MaxRetries             int        `gorm:"default:0" json:"max_retries"`
 	RetryInterval          int        `gorm:"default:60" json:"retry_interval"`
 	NotifyOnFailure        bool       `gorm:"default:true" json:"notify_on_failure"`
+	NotifyOnSuccess        bool       `gorm:"default:false" json:"notify_on_success"`
 	DependsOn              *uint      `gorm:"index" json:"depends_on"`
 	SortOrder              int        `gorm:"default:0" json:"sort_order"`
 	IsPinned               bool       `gorm:"default:false" json:"is_pinned"`

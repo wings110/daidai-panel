@@ -581,6 +581,20 @@ func (h *EnvHandler) CancelMoveToTop(c *gin.Context) {
 	response.Success(c, gin.H{"message": "已取消置顶"})
 }
 
+func (h *EnvHandler) BatchSetGroup(c *gin.Context) {
+	var req struct {
+		IDs   []uint `json:"ids" binding:"required"`
+		Group string `json:"group"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误")
+		return
+	}
+
+	database.DB.Model(&model.EnvVar{}).Where("id IN ?", req.IDs).Update("\"group\"", req.Group)
+	response.Success(c, gin.H{"message": fmt.Sprintf("已更新 %d 个变量的分组", len(req.IDs))})
+}
+
 func (h *EnvHandler) RegisterRoutes(r *gin.RouterGroup) {
 	envs := r.Group("/envs", middleware.JWTAuth())
 	{
@@ -593,6 +607,7 @@ func (h *EnvHandler) RegisterRoutes(r *gin.RouterGroup) {
 		envs.DELETE("/batch", h.BatchDelete)
 		envs.PUT("/batch/enable", h.BatchEnable)
 		envs.PUT("/batch/disable", h.BatchDisable)
+		envs.PUT("/batch/group", h.BatchSetGroup)
 		envs.GET("/export", h.Export)
 		envs.PUT("/sort", h.Sort)
 		envs.PUT("/:id/move-top", h.MoveToTop)

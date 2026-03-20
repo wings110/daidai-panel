@@ -316,7 +316,7 @@
 
 .card-pulse {
   animation: cardPulse 2s ease-in-out infinite;
-  will-change: transform, box-shadow;
+  will-change: transform;
 }
 
 .spin {
@@ -353,7 +353,7 @@
 
 .glow {
   animation: glow 2s ease-in-out infinite;
-  will-change: box-shadow, filter;
+  will-change: auto;
 }
 
 /* 工具类 - 淡入动画 */
@@ -395,7 +395,6 @@
 /* 过渡类 */
 .transition-all {
   transition: all 0.25s var(--ease-in-out);
-  will-change: auto;
 }
 
 .transition-fast {

@@ -647,8 +647,6 @@ onMounted(() => {
   loadVersion()
   loadSystemStats()
   loadSystemInfo()
-  loadSystemConfigs()
-  load2FAStatus()
 })
 </script>
 

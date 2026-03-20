@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -8,9 +10,11 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"daidai-panel/config"
+	"daidai-panel/model"
 )
 
 var panelStartTime = time.Now()
@@ -159,4 +163,74 @@ func getLinuxCPU() float64 {
 	}
 	usage := float64(totalDelta-idleDelta) / float64(totalDelta) * 100
 	return math.Round(usage*100) / 100
+}
+
+var (
+	resourceCheckOnce sync.Once
+	resourceCheckStop chan struct{}
+	lastWarnTime      time.Time
+)
+
+func StartResourceWatcher() {
+	resourceCheckOnce.Do(func() {
+		resourceCheckStop = make(chan struct{})
+		go resourceWatchLoop()
+		log.Println("resource watcher started (interval: 5min)")
+	})
+}
+
+func StopResourceWatcher() {
+	if resourceCheckStop != nil {
+		close(resourceCheckStop)
+	}
+}
+
+func resourceWatchLoop() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	time.Sleep(30 * time.Second)
+	checkResourceThresholds()
+
+	for {
+		select {
+		case <-ticker.C:
+			checkResourceThresholds()
+		case <-resourceCheckStop:
+			return
+		}
+	}
+}
+
+func checkResourceThresholds() {
+	if model.GetConfig("notify_on_resource_warn", "false") != "true" {
+		return
+	}
+
+	if time.Since(lastWarnTime) < 30*time.Minute {
+		return
+	}
+
+	info := GetResourceInfo()
+	cpuThreshold := float64(model.GetConfigInt("cpu_warn", 80))
+	memThreshold := float64(model.GetConfigInt("memory_warn", 80))
+	diskThreshold := float64(model.GetConfigInt("disk_warn", 90))
+
+	var warnings []string
+	if info.CPUUsage > cpuThreshold {
+		warnings = append(warnings, fmt.Sprintf("CPU 使用率 %.1f%% (阈值 %.0f%%)", info.CPUUsage, cpuThreshold))
+	}
+	if info.MemoryUsage > memThreshold {
+		warnings = append(warnings, fmt.Sprintf("内存使用率 %.1f%% (阈值 %.0f%%)", info.MemoryUsage, memThreshold))
+	}
+	if info.DiskUsage > diskThreshold {
+		warnings = append(warnings, fmt.Sprintf("磁盘使用率 %.1f%% (阈值 %.0f%%)", info.DiskUsage, diskThreshold))
+	}
+
+	if len(warnings) > 0 {
+		lastWarnTime = time.Now()
+		content := "以下资源使用超过告警阈值：\n\n" + strings.Join(warnings, "\n")
+		go SendNotification("系统资源告警", content)
+		log.Printf("resource warn: %s", strings.Join(warnings, "; "))
+	}
 }

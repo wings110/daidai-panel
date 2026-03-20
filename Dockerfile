@@ -32,7 +32,7 @@ RUN apk add --no-cache \
     git openssh-client \
     docker-cli
 
-RUN mkdir -p /app/Dumb-Panel/scripts /app/Dumb-Panel/logs /app/Dumb-Panel/backups /run/nginx
+RUN mkdir -p /app/Dumb-Panel/scripts /app/Dumb-Panel/logs /app/Dumb-Panel/backups /run/nginx /tmp && chmod 1777 /tmp
 
 WORKDIR /app
 

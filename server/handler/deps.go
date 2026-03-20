@@ -538,7 +538,12 @@ func runCmdWithSSE(cmd *exec.Cmd, id uint, successStatus string, deleteOnSuccess
 	broadcaster.done()
 }
 
+func ensureTmpDir() {
+	os.MkdirAll("/tmp", 0o1777)
+}
+
 func installDependency(id uint, depType, name string) {
+	ensureTmpDir()
 	var cmd *exec.Cmd
 	depsDir := filepath.Join(config.C.Data.Dir, "deps")
 	switch depType {
@@ -547,6 +552,7 @@ func installDependency(id uint, depType, name string) {
 	case model.DepTypePython:
 		pipBin := filepath.Join(depsDir, "python", "venv", "bin", "pip")
 		cmd = exec.Command(pipBin, "install", name)
+		cmd.Env = append(os.Environ(), "TMPDIR=/tmp")
 	case model.DepTypeLinux:
 		cmd = exec.Command("bash", "-c", "apt-get install -y "+name+" 2>&1 || yum install -y "+name+" 2>&1 || apk add "+name+" 2>&1")
 	default:

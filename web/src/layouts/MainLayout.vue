@@ -14,6 +14,7 @@ const isMobile = ref(false)
 const drawerVisible = ref(false)
 const panelTitle = ref('呆呆面板')
 const panelIcon = ref('')
+const panelVersion = ref('')
 
 function checkMobile() {
   isMobile.value = window.innerWidth <= 768
@@ -24,6 +25,10 @@ onMounted(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
   loadPanelSettings()
+  loadVersion()
+  if (authStore.isLoggedIn && !authStore.user) {
+    authStore.fetchUser()
+  }
 })
 
 onUnmounted(() => {
@@ -71,6 +76,13 @@ async function loadPanelSettings() {
     if (res.data?.panel_icon) panelIcon.value = res.data.panel_icon
   } catch {}
 }
+
+async function loadVersion() {
+  try {
+    const res = await systemApi.version() as any
+    if (res.data?.version) panelVersion.value = res.data.version
+  } catch {}
+}
 </script>
 
 <template>
@@ -79,6 +91,7 @@ async function loadPanelSettings() {
       <div class="logo-area">
         <img :src="panelIcon || '/favicon.svg'" alt="logo" class="logo-img" />
         <span v-show="!isCollapsed" class="logo-text">{{ panelTitle }}</span>
+        <span v-show="!isCollapsed && panelVersion" class="version-badge">v{{ panelVersion }}</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -105,6 +118,7 @@ async function loadPanelSettings() {
       <div class="logo-area mobile-logo">
         <img :src="panelIcon || '/favicon.svg'" alt="logo" class="logo-img" />
         <span class="logo-text">{{ panelTitle }}</span>
+        <span v-if="panelVersion" class="version-badge">v{{ panelVersion }}</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -196,6 +210,20 @@ async function loadPanelSettings() {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .version-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #409EFF, #7B5CFA);
+    color: #fff;
+    white-space: nowrap;
+    line-height: 1.4;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    align-self: center;
   }
 }
 

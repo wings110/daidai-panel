@@ -15,6 +15,16 @@ interface TreeNode {
 const router = useRouter()
 const route = useRoute()
 
+const isMobile = ref(window.innerWidth <= 768)
+const mobileShowEditor = ref(false)
+
+function handleResize() {
+  isMobile.value = window.innerWidth <= 768
+  if (!isMobile.value) {
+    mobileShowEditor.value = false
+  }
+}
+
 const fileTree = ref<TreeNode[]>([])
 const selectedFile = ref('')
 const fileContent = ref('')
@@ -144,16 +154,19 @@ function handleKeyDown(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('resize', handleResize)
   const fileParam = route.query.file as string
   if (fileParam) {
     selectedFile.value = fileParam
     loadFileContent(fileParam)
+    mobileShowEditor.value = true
     router.replace({ path: '/scripts' })
   }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('resize', handleResize)
   if (debugTimer) {
     clearInterval(debugTimer)
     debugTimer = null
@@ -179,6 +192,7 @@ async function handleNodeClick(data: TreeNode) {
   }
   selectedFile.value = data.key
   isEditing.value = false
+  mobileShowEditor.value = true
   await loadFileContent(data.key)
 }
 
@@ -259,12 +273,12 @@ async function handleCreateDir() {
   }
 }
 
-async function handleDelete(path: string) {
+async function handleDelete(path: string, isDir = false) {
   try {
-    await ElMessageBox.confirm(`确定要删除 ${path} 吗？`, '确认删除', { type: 'warning' })
-    await scriptApi.delete(path)
+    await ElMessageBox.confirm(`确定要删除 ${path} 吗？${isDir ? '\n注意：将同时删除文件夹内所有文件！' : ''}`, '确认删除', { type: 'warning' })
+    await scriptApi.delete(path, isDir ? 'directory' : 'file')
     ElMessage.success('删除成功')
-    if (selectedFile.value === path) {
+    if (selectedFile.value === path || (isDir && selectedFile.value.startsWith(path + '/'))) {
       selectedFile.value = ''
       fileContent.value = ''
       originalContent.value = ''
@@ -610,11 +624,15 @@ function getFileIconColor(node: TreeNode): string {
 function getFileName(path: string) {
   return path.split('/').pop() || path
 }
+
+function handleMobileBack() {
+  mobileShowEditor.value = false
+}
 </script>
 
 <template>
-  <div class="scripts-page">
-    <div class="scripts-sidebar">
+  <div class="scripts-page" :class="{ 'mobile': isMobile, 'mobile-show-editor': isMobile && mobileShowEditor }">
+    <div class="scripts-sidebar" v-show="!isMobile || !mobileShowEditor">
       <div class="sidebar-header">
         <span class="sidebar-title">脚本文件</span>
         <div class="sidebar-actions">
@@ -670,8 +688,12 @@ function getFileName(path: string) {
                   <el-icon class="more-btn" :size="18"><MoreFilled /></el-icon>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item @click="openRename(data.key)">重命名</el-dropdown-item>
-                      <el-dropdown-item @click="handleDelete(data.key)">删除</el-dropdown-item>
+                      <el-dropdown-item @click="openRename(data.key)">
+                        <el-icon><Edit /></el-icon>重命名
+                      </el-dropdown-item>
+                      <el-dropdown-item divided @click="handleDelete(data.key, !data.isLeaf)">
+                        <el-icon><Delete /></el-icon><span style="color: var(--el-color-danger)">删除</span>
+                      </el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
@@ -682,41 +704,50 @@ function getFileName(path: string) {
       </div>
     </div>
 
-    <div class="scripts-editor">
+    <div class="scripts-editor" v-show="!isMobile || mobileShowEditor">
       <div v-if="!selectedFile" class="editor-placeholder">
         <el-empty description="选择一个文件查看内容" />
       </div>
       <template v-else>
         <div class="editor-header">
           <div class="editor-file-info">
+            <el-button v-if="isMobile" class="mobile-back-btn" text @click="handleMobileBack">
+              <el-icon><ArrowLeft /></el-icon>
+            </el-button>
             <el-icon><Document /></el-icon>
             <span>{{ getFileName(selectedFile) }}</span>
             <el-tag v-if="hasChanges" size="small" type="warning">未保存</el-tag>
           </div>
           <div class="editor-actions">
-            <el-button v-if="!isEditing" size="default" type="primary" @click="isEditing = true" :disabled="isBinary">
-              <el-icon><Edit /></el-icon>编辑
+            <el-button v-if="!isEditing" :size="isMobile ? 'small' : 'default'" type="primary" @click="isEditing = true" :disabled="isBinary">
+              <el-icon><Edit /></el-icon><span v-if="!isMobile">编辑</span>
             </el-button>
-            <el-button v-if="isEditing" size="default" type="success" @click="handleDebugRun" :disabled="isBinary">
-              <el-icon><VideoPlay /></el-icon>调试
+            <el-button v-if="isEditing" :size="isMobile ? 'small' : 'default'" type="success" @click="handleDebugRun" :disabled="isBinary">
+              <el-icon><VideoPlay /></el-icon><span v-if="!isMobile">调试</span>
             </el-button>
-            <el-button size="default" type="primary" @click="handleAddToTask" :disabled="isBinary">
+            <el-button v-if="!isMobile" size="default" type="primary" @click="handleAddToTask" :disabled="isBinary">
               <el-icon><Plus /></el-icon>添加任务
             </el-button>
-            <el-button v-if="isEditing" size="default" type="primary" @click="handleSave" :loading="saving" :disabled="!hasChanges || isBinary">
-              <el-icon><Check /></el-icon>保存
+            <el-button v-if="isEditing" :size="isMobile ? 'small' : 'default'" type="primary" @click="handleSave" :loading="saving" :disabled="!hasChanges || isBinary">
+              <el-icon><Check /></el-icon><span v-if="!isMobile">保存</span>
             </el-button>
-            <el-button v-if="isEditing" size="default" @click="handleFormat" :loading="formatting" :disabled="isBinary">
+            <el-button v-if="isEditing && !isMobile" size="default" @click="handleFormat" :loading="formatting" :disabled="isBinary">
               <el-icon><MagicStick /></el-icon>格式化
             </el-button>
             <el-dropdown trigger="click">
-              <el-button size="default">
-                <el-icon><MoreFilled /></el-icon>更多
+              <el-button :size="isMobile ? 'small' : 'default'">
+                <el-icon><MoreFilled /></el-icon><span v-if="!isMobile">更多</span>
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item @click="loadVersions" :disabled="isBinary">
                     <el-icon><Clock /></el-icon>版本历史
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="isMobile" @click="handleAddToTask" :disabled="isBinary">
+                    <el-icon><Plus /></el-icon>添加任务
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="isMobile && isEditing" @click="handleFormat" :disabled="isBinary">
+                    <el-icon><MagicStick /></el-icon>格式化
                   </el-dropdown-item>
                   <el-dropdown-item @click="openRename(selectedFile)">
                     <el-icon><Edit /></el-icon>重命名
@@ -747,7 +778,7 @@ function getFileName(path: string) {
       </template>
     </div>
 
-    <el-dialog v-model="showCreateFileDialog" title="新建文件" width="480px">
+    <el-dialog v-model="showCreateFileDialog" title="新建文件" :width="isMobile ? '90%' : '480px'">
       <el-form label-width="80px">
         <el-form-item label="上级目录">
           <el-select v-model="newFileParent" placeholder="根目录" clearable style="width: 100%">
@@ -765,7 +796,7 @@ function getFileName(path: string) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showCreateDirDialog" title="新建目录" width="480px">
+    <el-dialog v-model="showCreateDirDialog" title="新建目录" :width="isMobile ? '90%' : '480px'">
       <el-form label-width="80px">
         <el-form-item label="上级目录">
           <el-select v-model="newDirParent" placeholder="根目录" clearable style="width: 100%">
@@ -783,7 +814,7 @@ function getFileName(path: string) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showRenameDialog" title="重命名" width="400px">
+    <el-dialog v-model="showRenameDialog" title="重命名" :width="isMobile ? '90%' : '400px'">
       <el-input v-model="renameTarget" placeholder="新名称" @keyup.enter="handleRename" />
       <template #footer>
         <el-button @click="showRenameDialog = false">取消</el-button>
@@ -791,7 +822,7 @@ function getFileName(path: string) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showVersionDialog" title="版本历史" width="600px">
+    <el-dialog v-model="showVersionDialog" title="版本历史" :width="isMobile ? '95%' : '600px'">
       <el-table :data="versions" v-loading="versionsLoading" max-height="400px">
         <el-table-column prop="version" label="版本" width="80" />
         <el-table-column prop="message" label="备注" />
@@ -809,7 +840,7 @@ function getFileName(path: string) {
       </el-table>
     </el-dialog>
 
-    <el-dialog v-model="showUploadDialog" title="上传文件" width="480px">
+    <el-dialog v-model="showUploadDialog" title="上传文件" :width="isMobile ? '90%' : '480px'" destroy-on-close>
       <el-form label-width="80px">
         <el-form-item label="目标目录">
           <el-select v-model="uploadDir" placeholder="根目录" clearable style="width: 100%">
@@ -836,7 +867,7 @@ function getFileName(path: string) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showCodeRunner" title="代码运行器" width="90%" :close-on-click-modal="false" top="5vh">
+    <el-dialog v-model="showCodeRunner" title="代码运行器" :width="isMobile ? '98%' : '90%'" :close-on-click-modal="false" :top="isMobile ? '2vh' : '5vh'">
       <div class="debug-container">
         <div class="debug-code-panel">
           <div class="panel-header">
@@ -883,7 +914,7 @@ function getFileName(path: string) {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="showDebugDialog" title="调试运行" width="90%" :close-on-click-modal="false" top="5vh">
+    <el-dialog v-model="showDebugDialog" title="调试运行" :width="isMobile ? '98%' : '90%'" :close-on-click-modal="false" :top="isMobile ? '2vh' : '5vh'">
       <div class="debug-container">
         <div class="debug-code-panel">
           <div class="panel-header">
@@ -1191,5 +1222,98 @@ function getFileName(path: string) {
 
 :deep(.el-button) {
   font-size: 14px;
+}
+
+.mobile-back-btn {
+  padding: 4px;
+  margin-right: -4px;
+}
+
+// 移动端适配
+.scripts-page.mobile {
+  flex-direction: column;
+  height: calc(100vh - 100px);
+
+  .scripts-sidebar {
+    width: 100%;
+    min-width: unset;
+    flex: 1;
+    border-right: none;
+    border-bottom: 1px solid var(--el-border-color-light);
+  }
+
+  .scripts-editor {
+    width: 100%;
+    flex: 1;
+  }
+
+  .editor-header {
+    padding: 8px 12px;
+    gap: 6px;
+
+    .editor-file-info {
+      gap: 6px;
+      font-size: 14px;
+      min-width: 0;
+      overflow: hidden;
+
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .editor-actions {
+      gap: 4px;
+      flex-shrink: 0;
+    }
+  }
+
+  .editor-content {
+    .code-editor {
+      min-height: 300px;
+    }
+  }
+
+  .sidebar-header {
+    padding: 8px 10px;
+
+    .sidebar-actions {
+      gap: 1px;
+    }
+  }
+
+  .tree-node {
+    .tree-node-actions {
+      opacity: 1;
+    }
+    .file-ext-badge {
+      opacity: 1;
+    }
+  }
+}
+
+.scripts-page.mobile .debug-container {
+  flex-direction: column;
+  height: auto;
+  min-height: auto;
+  max-height: 75vh;
+
+  .debug-code-panel,
+  .debug-log-panel {
+    min-height: 200px;
+    max-height: 40vh;
+  }
+
+  .panel-content {
+    padding: 8px;
+  }
+}
+
+.scripts-page.mobile.mobile-show-editor {
+  .scripts-editor {
+    height: 100%;
+  }
 }
 </style>

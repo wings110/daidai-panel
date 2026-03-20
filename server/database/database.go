@@ -112,6 +112,7 @@ func EnsureColumns() {
 		{"max_retries", "INTEGER DEFAULT 0"},
 		{"retry_interval", "INTEGER DEFAULT 60"},
 		{"notify_on_failure", "BOOLEAN DEFAULT 1"},
+		{"notify_on_success", "BOOLEAN DEFAULT 0"},
 		{"depends_on", "INTEGER"},
 		{"sort_order", "INTEGER DEFAULT 0"},
 		{"is_pinned", "BOOLEAN DEFAULT 0"},

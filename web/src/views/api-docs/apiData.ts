@@ -129,6 +129,7 @@ export const apiCategories: ApiCategory[] = [
           { name: 'name', type: 'string', required: true, description: '变量名', example: 'sfsyUrl' },
           { name: 'value', type: 'string', required: true, description: '变量值（无需 URL 编码）', example: 'sessionId=xxx&_login_mobile_=xxx' },
           { name: 'remarks', type: 'string', description: '备注，建议存储用户标识信息', example: '顺丰:账号1丨用户:123丨手机:138****1234丨到期:2026-12-31' },
+          { name: 'group', type: 'string', description: '分组名称', example: '顺丰' },
         ],
         responseExample: JSON.stringify({
           message: '创建成功',
@@ -154,6 +155,7 @@ export const apiCategories: ApiCategory[] = [
           { name: 'name', type: 'string', description: '变量名', example: 'sfsyUrl' },
           { name: 'value', type: 'string', description: '新的变量值', example: 'sessionId=new_value&_login_mobile_=new_mobile' },
           { name: 'remarks', type: 'string', description: '备注', example: '顺丰:账号1丨用户:123丨手机:138****1234丨到期:2026-12-31' },
+          { name: 'group', type: 'string', description: '分组名称', example: '顺丰' },
         ],
         responseExample: JSON.stringify({ message: '更新成功' }, null, 2),
       },
@@ -585,6 +587,7 @@ panel.add_or_update_env(
           { name: 'name', type: 'string', required: true, description: '变量名', example: 'MY_TOKEN' },
           { name: 'value', type: 'string', required: true, description: '变量值', example: 'abc123' },
           { name: 'remarks', type: 'string', description: '备注' },
+          { name: 'group', type: 'string', description: '分组名称' },
         ],
         responseExample: JSON.stringify({ message: '创建成功', data: { id: 1 } }, null, 2),
       },
@@ -599,8 +602,8 @@ panel.add_or_update_env(
         bodyParams: [
           { name: 'name', type: 'string', description: '变量名' },
           { name: 'value', type: 'string', description: '变量值' },
-          { name: 'enabled', type: 'boolean', description: '是否启用' },
           { name: 'remarks', type: 'string', description: '备注' },
+          { name: 'group', type: 'string', description: '分组名称' },
         ],
         responseExample: JSON.stringify({ message: '更新成功' }, null, 2),
       },

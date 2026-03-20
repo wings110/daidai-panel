@@ -85,6 +85,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		MaxRetries             *int     `json:"max_retries"`
 		RetryInterval          *int     `json:"retry_interval"`
 		NotifyOnFailure        *bool    `json:"notify_on_failure"`
+		NotifyOnSuccess        *bool    `json:"notify_on_success"`
 		Labels                 []string `json:"labels"`
 		DependsOn              *uint    `json:"depends_on"`
 		TaskBefore             *string  `json:"task_before"`
@@ -97,12 +98,12 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	}
 
 	task := model.Task{
-		Name:           req.Name,
-		Command:        req.Command,
-		CronExpression: req.CronExpression,
-		Status:         model.TaskStatusEnabled,
-		Timeout:        86400,
-		RetryInterval:  60,
+		Name:            req.Name,
+		Command:         req.Command,
+		CronExpression:  req.CronExpression,
+		Status:          model.TaskStatusEnabled,
+		Timeout:         86400,
+		RetryInterval:   60,
 		NotifyOnFailure: true,
 	}
 
@@ -117,6 +118,9 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	}
 	if req.NotifyOnFailure != nil {
 		task.NotifyOnFailure = *req.NotifyOnFailure
+	}
+	if req.NotifyOnSuccess != nil {
+		task.NotifyOnSuccess = *req.NotifyOnSuccess
 	}
 	if req.Labels != nil {
 		task.SetLabelsFromSlice(req.Labels)
@@ -173,7 +177,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	allowedFields := map[string]bool{
 		"name": true, "command": true, "cron_expression": true,
 		"timeout": true, "max_retries": true, "retry_interval": true,
-		"notify_on_failure": true, "labels": true, "depends_on": true,
+		"notify_on_failure": true, "notify_on_success": true, "labels": true, "depends_on": true,
 		"sort_order": true, "task_before": true, "task_after": true,
 		"allow_multiple_instances": true,
 	}
@@ -331,6 +335,7 @@ func (h *TaskHandler) Copy(c *gin.Context) {
 		MaxRetries:             task.MaxRetries,
 		RetryInterval:          task.RetryInterval,
 		NotifyOnFailure:        task.NotifyOnFailure,
+		NotifyOnSuccess:        task.NotifyOnSuccess,
 		DependsOn:              task.DependsOn,
 		TaskBefore:             task.TaskBefore,
 		TaskAfter:              task.TaskAfter,
@@ -612,6 +617,7 @@ func (h *TaskHandler) Export(c *gin.Context) {
 			"max_retries":              t.MaxRetries,
 			"retry_interval":           t.RetryInterval,
 			"notify_on_failure":        t.NotifyOnFailure,
+			"notify_on_success":        t.NotifyOnSuccess,
 			"depends_on":               t.DependsOn,
 			"sort_order":               t.SortOrder,
 			"task_before":              t.TaskBefore,
@@ -671,6 +677,9 @@ func (h *TaskHandler) Import(c *gin.Context) {
 		}
 		if v, ok := t["notify_on_failure"].(bool); ok {
 			task.NotifyOnFailure = v
+		}
+		if v, ok := t["notify_on_success"].(bool); ok {
+			task.NotifyOnSuccess = v
 		}
 		if labels, ok := t["labels"].([]interface{}); ok {
 			strs := make([]string, len(labels))

@@ -225,6 +225,21 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 			Duration: duration,
 		}
 		e.OnTaskCompleted(req, result)
+
+		if success && task.NotifyOnSuccess {
+			go SendNotification(
+				"任务执行成功",
+				fmt.Sprintf("定时任务「%s」已于 %s 运行完毕，耗时 %.1f 秒。",
+					task.Name, endedAt.Format("2006-01-02 15:04:05"), duration),
+			)
+		}
+		if !success && task.NotifyOnFailure {
+			go SendNotification(
+				"任务执行失败",
+				fmt.Sprintf("定时任务「%s」执行失败，退出码 %d，耗时 %.1f 秒。",
+					task.Name, exitCode, duration),
+			)
+		}
 	}()
 
 	logMgr := GetLogStreamManager()
@@ -324,7 +339,7 @@ func (e *TaskExecutor) runTask(req *ExecutionRequest, taskLog *model.TaskLog, ti
 }
 
 var (
-	pyModuleRe  = regexp.MustCompile(`(?:ModuleNotFoundError|ImportError):\s*No module named\s+'([^']+)'`)
+	pyModuleRe   = regexp.MustCompile(`(?:ModuleNotFoundError|ImportError):\s*No module named\s+'([^']+)'`)
 	nodeModuleRe = regexp.MustCompile(`(?:Cannot find module|Error \[ERR_MODULE_NOT_FOUND\].*)\s*'([^']+)'`)
 )
 
@@ -348,7 +363,7 @@ func (e *TaskExecutor) detectAndInstallDeps(output string, envVars map[string]st
 		} else {
 			onOutput(fmt.Sprintf("[安装成功: %s]", modName))
 			installed = true
-			recordAutoInstalledDep(model.DepTypePython, modName, string(out))
+			RecordAutoInstalledDep(model.DepTypePython, modName, string(out))
 		}
 	}
 
@@ -368,14 +383,14 @@ func (e *TaskExecutor) detectAndInstallDeps(output string, envVars map[string]st
 		} else {
 			onOutput(fmt.Sprintf("[安装成功: %s]", modName))
 			installed = true
-			recordAutoInstalledDep(model.DepTypeNodeJS, modName, string(out))
+			RecordAutoInstalledDep(model.DepTypeNodeJS, modName, string(out))
 		}
 	}
 
 	return installed
 }
 
-func recordAutoInstalledDep(depType, name, installLog string) {
+func RecordAutoInstalledDep(depType, name, installLog string) {
 	var existing model.Dependency
 	if err := database.DB.Where("type = ? AND name = ?", depType, name).First(&existing).Error; err == nil {
 		database.DB.Model(&existing).Updates(map[string]interface{}{

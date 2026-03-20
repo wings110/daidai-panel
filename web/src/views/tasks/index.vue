@@ -92,13 +92,19 @@ function checkAutoCreate() {
   }
 }
 
+let mounted = false
+
 onMounted(() => {
+  mounted = true
   loadTasks()
   checkAutoCreate()
 })
 
 onActivated(() => {
-  loadTasks()
+  if (!mounted) {
+    loadTasks()
+  }
+  mounted = false
   checkAutoCreate()
 })
 
@@ -211,11 +217,13 @@ async function handleRun(task: any) {
 
 async function handleStop(task: any) {
   try {
+    await ElMessageBox.confirm(`确认停止定时任务「${task.name}」吗？`, '停止确认', { type: 'warning' })
     await taskApi.stop(task.id)
     ElMessage.success('任务已停止')
     task.status = 1
     loadTasks()
   } catch (err: any) {
+    if (err === 'cancel' || err?.toString() === 'cancel') return
     ElMessage.error(err?.response?.data?.error || '停止失败')
   }
 }
@@ -276,14 +284,22 @@ async function handleBatchAction(action: string) {
     ElMessage.warning('请先选择任务')
     return
   }
-  if (action === 'delete') {
-    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 个任务？`, '批量删除', { type: 'warning' })
+  const confirmMap: Record<string, { title: string; msg: string; type: 'warning' | 'info' }> = {
+    delete: { title: '批量删除', msg: `确定删除选中的 ${selectedIds.value.length} 个任务？`, type: 'warning' },
+    run: { title: '批量运行', msg: `确定运行选中的 ${selectedIds.value.length} 个任务？`, type: 'info' },
+    enable: { title: '批量启用', msg: `确定启用选中的 ${selectedIds.value.length} 个任务？`, type: 'info' },
+    disable: { title: '批量禁用', msg: `确定禁用选中的 ${selectedIds.value.length} 个任务？`, type: 'warning' },
+  }
+  const confirm = confirmMap[action]
+  if (confirm) {
+    await ElMessageBox.confirm(confirm.msg, confirm.title, { type: confirm.type })
   }
   try {
     await taskApi.batch(selectedIds.value, action)
     ElMessage.success('操作成功')
     loadTasks()
   } catch (err: any) {
+    if (err === 'cancel' || err?.toString() === 'cancel') return
     ElMessage.error(err?.response?.data?.error || '操作失败')
   }
 }
@@ -431,11 +447,9 @@ async function handleImport(event: Event) {
           </code>
         </template>
       </el-table-column>
-      <el-table-column label="定时规则" width="130">
+      <el-table-column label="定时规则" min-width="130" show-overflow-tooltip>
         <template #default="{ row }">
-          <el-tooltip :content="row.cron_expression">
-            <code>{{ row.cron_expression }}</code>
-          </el-tooltip>
+          <code class="cron-text">{{ row.cron_expression }}</code>
         </template>
       </el-table-column>
       <el-table-column label="状态" width="100" align="center">
@@ -610,6 +624,13 @@ async function handleImport(event: Event) {
     cursor: pointer;
     &:hover { text-decoration: underline; }
   }
+}
+
+.cron-text {
+  font-family: var(--dd-font-mono);
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
 }
 
 .time-text {

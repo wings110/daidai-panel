@@ -20,6 +20,8 @@ const loading = ref(false)
 const logContainerRef = ref<HTMLElement>()
 const autoScroll = ref(true)
 let eventSource: EventSource | null = null
+let logBuffer: string[] = []
+let logFlushRaf = 0
 
 watch(() => props.visible, (visible) => {
   if (visible && props.taskId) {
@@ -48,9 +50,16 @@ async function startStream() {
   eventSource.onmessage = (e) => {
     loading.value = false
     if (e.data) {
-      logs.value.push(e.data)
-      if (autoScroll.value) {
-        nextTick(() => scrollToBottom())
+      logBuffer.push(e.data)
+      if (!logFlushRaf) {
+        logFlushRaf = requestAnimationFrame(() => {
+          logs.value.push(...logBuffer)
+          logBuffer = []
+          logFlushRaf = 0
+          if (autoScroll.value) {
+            scrollToBottom()
+          }
+        })
       }
     }
   }
@@ -109,6 +118,11 @@ function cleanup() {
     eventSource.close()
     eventSource = null
   }
+  if (logFlushRaf) {
+    cancelAnimationFrame(logFlushRaf)
+    logFlushRaf = 0
+  }
+  logBuffer = []
 }
 
 onUnmounted(cleanup)
@@ -129,10 +143,12 @@ function handleClose() {
     <div class="log-viewer">
       <div class="log-toolbar">
         <el-checkbox v-model="autoScroll" size="small">自动滚动</el-checkbox>
-        <el-tag v-if="!done" type="warning" size="small" class="running-tag">
-          <span class="spinner"></span> 运行中
+        <el-tag v-if="!done" type="warning" size="small" effect="plain" class="status-tag">
+          <span class="pulse-dot-sm"></span> 运行中
         </el-tag>
-        <el-tag v-else type="success" size="small">已完成</el-tag>
+        <el-tag v-else type="success" size="small" effect="plain" class="status-tag">
+          <el-icon :size="12"><CircleCheckFilled /></el-icon> 已完成
+        </el-tag>
       </div>
 
       <div ref="logContainerRef" class="log-container" v-loading="loading">
@@ -186,24 +202,24 @@ function handleClose() {
   padding: 40px 20px;
 }
 
-.running-tag {
-  display: inline-flex;
+.status-tag {
+  display: inline-flex !important;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
-.spinner {
+.pulse-dot-sm {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(230, 162, 60, 0.3);
-  border-top-color: #e6a23c;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  background: var(--el-color-warning);
+  animation: smoothPulse 1.5s ease-in-out infinite;
+  will-change: opacity;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes smoothPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 </style>

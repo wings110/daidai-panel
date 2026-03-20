@@ -125,7 +125,12 @@ import { systemApi } from '@/api/system'
 import {
   Timer, Check, ArrowRight, VideoPlay,
 } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const CountUp = defineComponent({
   props: {
@@ -159,6 +164,10 @@ const CountUp = defineComponent({
     }
 
     watch(() => props.endVal, () => animate(), { immediate: true })
+
+    onUnmounted(() => {
+      cancelAnimationFrame(animFrame)
+    })
 
     return () => h('span', {}, display.value + props.suffix)
   }

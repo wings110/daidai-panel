@@ -18,7 +18,7 @@ const showLogDialog = ref(false)
 const isCreate = ref(true)
 const qlCommand = ref('')
 
-const GITHUB_MIRROR = 'https://docker.1ms.run/'
+const GITHUB_MIRROR = 'http://gh.301.ee/'
 
 const editForm = ref({
   id: 0,
@@ -44,12 +44,17 @@ const logPage = ref(1)
 const logSubId = ref(0)
 const logLoading = ref(false)
 
+const showLogDetail = ref(false)
+const logDetailContent = ref('')
+
 const showPullLog = ref(false)
 const pullLogLines = ref<string[]>([])
 const pullRunning = ref(false)
 const pullingSubId = ref<number | null>(null)
 let pullEventSource: EventSource | null = null
 const pullLogRef = ref<HTMLElement>()
+let pullBuffer: string[] = []
+let pullFlushRaf = 0
 
 async function loadData() {
   loading.value = true
@@ -82,6 +87,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   closePullStream()
+  if (pullFlushRaf) {
+    cancelAnimationFrame(pullFlushRaf)
+    pullFlushRaf = 0
+  }
 })
 
 function handleSearch() {
@@ -115,7 +124,7 @@ function parseQLCommand() {
 
   const repoMatch = cmd.match(/ql\s+repo\s+"?([^\s"]+)"?\s*"?([^"]*)"?\s*"?([^"]*)"?\s*"?([^"]*)"?\s*"?([^"]*)"?/)
   if (repoMatch) {
-    const [, url = '', whitelist, blacklist, branch, dependOn] = repoMatch
+    const [, url = '', whitelist, blacklist, dependOn, branch] = repoMatch
     const repoName = url.replace(/\.git$/, '').split('/').pop() || 'repo'
     editForm.value.type = 'git-repo'
     editForm.value.url = addGithubMirror(url)
@@ -254,10 +263,15 @@ function connectPullStream(id: number) {
   const url = `${base}/subscriptions/${id}/pull-stream?token=${auth.accessToken}`
   pullEventSource = new EventSource(url)
   pullEventSource.onmessage = (e) => {
-    pullLogLines.value.push(e.data)
-    nextTick(() => {
-      if (pullLogRef.value) pullLogRef.value.scrollTop = pullLogRef.value.scrollHeight
-    })
+    pullBuffer.push(e.data)
+    if (!pullFlushRaf) {
+      pullFlushRaf = requestAnimationFrame(() => {
+        pullLogLines.value.push(...pullBuffer)
+        pullBuffer = []
+        pullFlushRaf = 0
+        if (pullLogRef.value) pullLogRef.value.scrollTop = pullLogRef.value.scrollHeight
+      })
+    }
   }
   pullEventSource.addEventListener('done', () => {
     pullRunning.value = false
@@ -319,6 +333,11 @@ function getStatusTag(status: number) {
 
 function getStatusText(status: number) {
   return status === 0 ? '正常' : '失败'
+}
+
+function viewLogDetail(log: any) {
+  logDetailContent.value = log.content || '(无日志内容)'
+  showLogDetail.value = true
 }
 </script>
 
@@ -489,6 +508,11 @@ function getStatusText(status: number) {
         <el-table-column prop="created_at" label="时间" width="170">
           <template #default="{ row }">{{ new Date(row.created_at).toLocaleString() }}</template>
         </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button size="small" text type="primary" @click="viewLogDetail(row)">查看</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <div class="pagination-container" v-if="logTotal > 10" style="margin-top: 12px">
         <el-pagination
@@ -499,6 +523,10 @@ function getStatusText(status: number) {
           @current-change="loadLogs"
         />
       </div>
+    </el-dialog>
+
+    <el-dialog v-model="showLogDetail" title="日志详情" width="700px">
+      <pre class="pull-log-content" style="min-height: 100px">{{ logDetailContent || '(无日志内容)' }}</pre>
     </el-dialog>
 
     <el-dialog v-model="showPullLog" title="拉取日志" width="700px" :close-on-click-modal="false" @close="closePullStream">

@@ -1241,14 +1241,22 @@ func installDepForDebug(depName, ext string, envMap map[string]string) bool {
 		}
 		cmd := exec.Command(venvPip, "install", depName)
 		cmd.Env = env
-		_, err := cmd.CombinedOutput()
-		return err == nil
+		out, err := cmd.CombinedOutput()
+		if err == nil {
+			service.RecordAutoInstalledDep(model.DepTypePython, depName, string(out))
+			return true
+		}
+		return false
 	}
 
 	nodeDir := filepath.Join(depsDir, "nodejs")
 	os.MkdirAll(nodeDir, 0755)
 	cmd := exec.Command("npm", "install", depName, "--prefix", nodeDir)
 	cmd.Env = env
-	_, err := cmd.CombinedOutput()
-	return err == nil
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		service.RecordAutoInstalledDep(model.DepTypeNodeJS, depName, string(out))
+		return true
+	}
+	return false
 }

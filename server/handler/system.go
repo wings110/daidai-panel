@@ -336,8 +336,8 @@ func (h *SystemHandler) UpdatePanel(c *gin.Context) {
 
 		var containerInfo struct {
 			HostConfig struct {
-				Binds       []string `json:"Binds"`
-				NetworkMode string   `json:"NetworkMode"`
+				Binds         []string `json:"Binds"`
+				NetworkMode   string   `json:"NetworkMode"`
 				RestartPolicy struct {
 					Name string `json:"Name"`
 				} `json:"RestartPolicy"`

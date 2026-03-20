@@ -21,6 +21,7 @@ const form = ref({
   max_retries: 0,
   retry_interval: 60,
   notify_on_failure: true,
+  notify_on_success: false,
   labels: [] as string[],
   depends_on: null as number | null,
   task_before: '',
@@ -41,6 +42,7 @@ watch(() => props.visible, (val) => {
       max_retries: props.task.max_retries ?? 0,
       retry_interval: props.task.retry_interval ?? 60,
       notify_on_failure: props.task.notify_on_failure ?? true,
+      notify_on_success: props.task.notify_on_success ?? false,
       labels: props.task.labels || [],
       depends_on: props.task.depends_on || null,
       task_before: props.task.task_before || '',
@@ -53,7 +55,7 @@ watch(() => props.visible, (val) => {
       name: p?.name || '', command: p?.command || '',
       cron_expression: p?.cron_expression || '* * * * *',
       timeout: 86400, max_retries: 0, retry_interval: 60,
-      notify_on_failure: true, labels: [], depends_on: null,
+      notify_on_failure: true, notify_on_success: false, labels: [], depends_on: null,
       task_before: '', task_after: '', allow_multiple_instances: false,
     }
   }
@@ -140,6 +142,10 @@ function handleSubmit() {
           </el-form-item>
           <el-form-item label="失败时通知">
             <el-switch v-model="form.notify_on_failure" />
+          </el-form-item>
+          <el-form-item label="成功时通知">
+            <el-switch v-model="form.notify_on_success" />
+            <span style="font-size: 12px; color: var(--el-text-color-secondary); margin-left: 8px">任务执行成功后发送通知</span>
           </el-form-item>
           <el-form-item label="允许多实例">
             <el-switch v-model="form.allow_multiple_instances" />

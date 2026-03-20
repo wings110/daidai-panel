@@ -30,6 +30,9 @@ const showExportDialog = ref(false)
 const exportFormat = ref('shell')
 const exportContent = ref('')
 
+const showBatchGroupDialog = ref(false)
+const batchGroupName = ref('')
+
 const tableRef = ref()
 let sortableInstance: any = null
 
@@ -239,6 +242,25 @@ async function handleBatchDelete() {
   } catch { /* cancelled */ }
 }
 
+async function handleBatchGroup() {
+  if (selectedIds.value.length === 0) return
+  batchGroupName.value = ''
+  showBatchGroupDialog.value = true
+}
+
+async function confirmBatchGroup() {
+  try {
+    await envApi.batchSetGroup(selectedIds.value, batchGroupName.value.trim())
+    ElMessage.success('批量分组成功')
+    showBatchGroupDialog.value = false
+    selectedIds.value = []
+    loadData()
+    loadGroups()
+  } catch {
+    ElMessage.error('批量分组失败')
+  }
+}
+
 async function handleBatchEnable() {
   if (selectedIds.value.length === 0) return
   try {
@@ -339,6 +361,13 @@ function copyExport() {
   navigator.clipboard.writeText(exportContent.value)
   ElMessage.success('已复制到剪贴板')
 }
+
+function formatDateTime(t: string | null) {
+  if (!t) return '-'
+  const d = new Date(t)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 </script>
 
 <template>
@@ -378,6 +407,9 @@ function copyExport() {
         </el-button>
         <el-button @click="handleBatchDelete" :disabled="selectedIds.length === 0">
           <el-icon><Delete /></el-icon>批量删除
+        </el-button>
+        <el-button @click="handleBatchGroup" :disabled="selectedIds.length === 0">
+          <el-icon><FolderAdd /></el-icon>批量分组
         </el-button>
         <el-dropdown trigger="click">
           <el-button>
@@ -439,13 +471,30 @@ function copyExport() {
           />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="更新时间" width="170">
         <template #default="{ row }">
-          <el-button size="small" text type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button size="small" text :type="isTopPinned(row) ? 'info' : 'warning'" @click="handleToggleTop(row)">
-            {{ isTopPinned(row) ? '取消置顶' : '置顶' }}
-          </el-button>
-          <el-button size="small" text type="danger" @click="handleDelete(row.id)">删除</el-button>
+          <span class="time-text">{{ formatDateTime(row.updated_at) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="160" fixed="right">
+        <template #default="{ row }">
+          <div class="action-group">
+            <el-tooltip content="编辑" placement="top">
+              <el-button size="small" type="primary" plain circle @click="openEdit(row)">
+                <el-icon><Edit /></el-icon>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip :content="isTopPinned(row) ? '取消置顶' : '置顶'" placement="top">
+              <el-button size="small" :type="isTopPinned(row) ? 'info' : 'warning'" plain circle @click="handleToggleTop(row)">
+                <el-icon><Top /></el-icon>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="删除" placement="top">
+              <el-button size="small" type="danger" plain circle @click="handleDelete(row.id)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </el-tooltip>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -545,6 +594,23 @@ function copyExport() {
       </div>
       <pre class="export-preview">{{ exportContent }}</pre>
     </el-dialog>
+
+    <el-dialog v-model="showBatchGroupDialog" title="批量设置分组" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="分组名称">
+          <el-select v-model="batchGroupName" filterable allow-create clearable placeholder="选择或输入分组名" style="width: 100%">
+            <el-option v-for="g in groups" :key="g" :label="g" :value="g" />
+          </el-select>
+        </el-form-item>
+        <el-alert type="info" :closable="false" show-icon>
+          留空将清除选中变量的分组
+        </el-alert>
+      </el-form>
+      <template #footer>
+        <el-button @click="showBatchGroupDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmBatchGroup">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -588,6 +654,12 @@ function copyExport() {
   }
 }
 
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .env-name {
   font-family: var(--dd-font-mono);
   font-size: 13px;
@@ -598,6 +670,12 @@ function copyExport() {
   font-family: var(--dd-font-mono);
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.time-text {
+  font-family: var(--dd-font-mono);
+  font-size: 12px;
+  color: var(--el-text-color-regular);
 }
 
 .drag-handle {

@@ -4,6 +4,8 @@ DATA_DIR=${DATA_DIR:-/app/Dumb-Panel}
 
 mkdir -p "${DATA_DIR}/scripts" "${DATA_DIR}/logs" "${DATA_DIR}/backups"
 mkdir -p "${DATA_DIR}/deps/nodejs" "${DATA_DIR}/deps/python"
+mkdir -p /tmp
+chmod 1777 /tmp
 
 export NODE_PATH="${DATA_DIR}/deps/nodejs/node_modules"
 export PATH="${DATA_DIR}/deps/nodejs/node_modules/.bin:${DATA_DIR}/deps/python/venv/bin:${PATH}"

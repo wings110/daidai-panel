@@ -25,16 +25,16 @@ type ScriptFile struct {
 }
 
 type BackupData struct {
-	Version   string    `json:"version"`
-	CreatedAt time.Time `json:"created_at"`
-	Tasks     []model.Task         `json:"tasks"`
-	EnvVars   []model.EnvVar       `json:"env_vars"`
-	Subs      []model.Subscription `json:"subscriptions"`
+	Version   string                `json:"version"`
+	CreatedAt time.Time             `json:"created_at"`
+	Tasks     []model.Task          `json:"tasks"`
+	EnvVars   []model.EnvVar        `json:"env_vars"`
+	Subs      []model.Subscription  `json:"subscriptions"`
 	Channels  []model.NotifyChannel `json:"notify_channels"`
-	SSHKeys   []model.SSHKey       `json:"ssh_keys"`
-	Configs   []model.SystemConfig `json:"system_configs"`
-	Scripts   []ScriptFile         `json:"scripts,omitempty"`
-	Deps      []model.Dependency   `json:"dependencies,omitempty"`
+	SSHKeys   []model.SSHKey        `json:"ssh_keys"`
+	Configs   []model.SystemConfig  `json:"system_configs"`
+	Scripts   []ScriptFile          `json:"scripts,omitempty"`
+	Deps      []model.Dependency    `json:"dependencies,omitempty"`
 }
 
 func collectScripts(scriptsDir string) []ScriptFile {

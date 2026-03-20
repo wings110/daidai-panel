@@ -21,6 +21,8 @@ const autoRefresh = ref(true)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 let logEventSource: EventSource | null = null
 const logContentRef = ref<HTMLElement>()
+let sseBuffer: string[] = []
+let sseFlushRaf = 0
 
 const showFileBrowser = ref(false)
 const currentTaskId = ref<number>(0)
@@ -47,9 +49,32 @@ async function loadLogs() {
   }
 }
 
-onMounted(() => {
-  loadLogs()
-  refreshTimer = setInterval(loadLogs, 5000)
+function hasRunningLogs() {
+  return logs.value.some(l => l.status === 2)
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  refreshTimer = setInterval(async () => {
+    await loadLogs()
+    if (!hasRunningLogs()) {
+      stopAutoRefresh()
+    }
+  }, 5000)
+}
+
+function stopAutoRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
+onMounted(async () => {
+  await loadLogs()
+  if (autoRefresh.value && hasRunningLogs()) {
+    startAutoRefresh()
+  }
 })
 
 function handleSearch() {
@@ -92,13 +117,19 @@ async function viewDetail(log: any) {
     const authStore = useAuthStore()
     const url = `/api/v1/logs/${log.id}/stream?token=${authStore.accessToken}`
     logEventSource = new EventSource(url)
+    sseBuffer = []
     logEventSource.onmessage = (e) => {
-      detailContent.value += e.data + '\n'
-      nextTick(() => {
-        if (logContentRef.value) {
-          logContentRef.value.scrollTop = logContentRef.value.scrollHeight
-        }
-      })
+      sseBuffer.push(e.data)
+      if (!sseFlushRaf) {
+        sseFlushRaf = requestAnimationFrame(() => {
+          detailContent.value += sseBuffer.join('\n') + '\n'
+          sseBuffer = []
+          sseFlushRaf = 0
+          if (logContentRef.value) {
+            logContentRef.value.scrollTop = logContentRef.value.scrollHeight
+          }
+        })
+      }
     }
     logEventSource.addEventListener('done', () => {
       closeLogSSE()
@@ -170,12 +201,9 @@ function toggleAutoRefresh() {
   autoRefresh.value = !autoRefresh.value
   if (autoRefresh.value) {
     loadLogs()
-    refreshTimer = setInterval(loadLogs, 5000)
+    startAutoRefresh()
   } else {
-    if (refreshTimer) {
-      clearInterval(refreshTimer)
-      refreshTimer = null
-    }
+    stopAutoRefresh()
   }
 }
 
@@ -223,10 +251,12 @@ function formatFileSize(size: number) {
 }
 
 onBeforeUnmount(() => {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-  }
+  stopAutoRefresh()
   closeLogSSE()
+  if (sseFlushRaf) {
+    cancelAnimationFrame(sseFlushRaf)
+    sseFlushRaf = 0
+  }
 })
 </script>
 

@@ -205,7 +205,7 @@ func buildCmd(interpreter, fullPath, scriptsDir string, envVars map[string]strin
 		cmd = exec.Command(interpreter, fullPath)
 	}
 
-	cmd.Dir = scriptsDir
+	cmd.Dir = filepath.Dir(fullPath)
 	cmd.Env = buildEnv(envVars)
 
 	setPgid(cmd)

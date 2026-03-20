@@ -174,6 +174,8 @@ const logContent = ref('')
 const logDone = ref(true)
 let eventSource: EventSource | null = null
 const logContainerRef = ref<HTMLElement>()
+let depsLogBuffer: string[] = []
+let depsLogFlushRaf = 0
 const createType = ref('nodejs')
 const createNames = ref('')
 const autoSplit = ref(true)
@@ -320,12 +322,17 @@ function viewLog(row: any) {
   eventSource = new EventSource(url)
 
   eventSource.onmessage = (e) => {
-    logContent.value += e.data + '\n'
-    nextTick(() => {
-      if (logContainerRef.value) {
-        logContainerRef.value.scrollTop = logContainerRef.value.scrollHeight
-      }
-    })
+    depsLogBuffer.push(e.data)
+    if (!depsLogFlushRaf) {
+      depsLogFlushRaf = requestAnimationFrame(() => {
+        logContent.value += depsLogBuffer.join('\n') + '\n'
+        depsLogBuffer = []
+        depsLogFlushRaf = 0
+        if (logContainerRef.value) {
+          logContainerRef.value.scrollTop = logContainerRef.value.scrollHeight
+        }
+      })
+    }
   }
 
   eventSource.addEventListener('done', () => {
@@ -386,7 +393,11 @@ onMounted(async () => {
     }
   }
 })
-onBeforeUnmount(() => { closeSSE(); if (refreshTimer) clearInterval(refreshTimer) })
+onBeforeUnmount(() => {
+  closeSSE()
+  if (refreshTimer) clearInterval(refreshTimer)
+  if (depsLogFlushRaf) { cancelAnimationFrame(depsLogFlushRaf); depsLogFlushRaf = 0 }
+})
 </script>
 
 <style scoped lang="scss">

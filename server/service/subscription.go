@@ -38,7 +38,10 @@ func PullSubscriptionWithCallback(sub *model.Subscription, onOutput PullCallback
 		}
 	}
 
+	var fullLog strings.Builder
 	emit := func(line string) {
+		fullLog.WriteString(line)
+		fullLog.WriteString("\n")
 		if onOutput != nil {
 			onOutput(line)
 		}
@@ -59,10 +62,8 @@ func PullSubscriptionWithCallback(sub *model.Subscription, onOutput PullCallback
 	duration := time.Since(startTime).Seconds()
 
 	status := 0
-	content := output
 	if pullErr != nil {
 		status = 1
-		content = fmt.Sprintf("%s\nError: %s", output, pullErr.Error())
 		emit(fmt.Sprintf("[错误] %s", pullErr.Error()))
 	}
 
@@ -75,7 +76,7 @@ func PullSubscriptionWithCallback(sub *model.Subscription, onOutput PullCallback
 	subLog := model.SubLog{
 		SubscriptionID: sub.ID,
 		Status:         status,
-		Content:        content,
+		Content:        fullLog.String(),
 		Duration:       duration,
 	}
 	database.DB.Create(&subLog)

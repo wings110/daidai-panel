@@ -37,6 +37,10 @@ export const envApi = {
     return request.put('/envs/batch/disable', { ids }) as Promise<{ message: string }>
   },
 
+  batchSetGroup(ids: number[], group: string) {
+    return request.put('/envs/batch/group', { ids, group }) as Promise<{ message: string }>
+  },
+
   sort(sourceId: number, targetId?: number) {
     return request.put('/envs/sort', { source_id: sourceId, target_id: targetId }) as Promise<{ message: string }>
   },
